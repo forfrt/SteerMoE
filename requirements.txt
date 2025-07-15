@@ -1,0 +1,8 @@
+torch>=1.13
+transformers>=4.29
+numpy
+soundfile
+loguru
+tqdm
+pyyaml
+pytest

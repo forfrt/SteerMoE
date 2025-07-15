@@ -1,0 +1,34 @@
+# Default config for SteerMoE
+
+whisper_encoder:
+  model_path: /root/autodl-nas/ruitao/Kimi-Audio/kimia_infer/models/tokenizer/whisper_Lv3  # Path to Whisper encoder
+  freeze: true
+
+llm_decoder:
+  model_name: gpt2  # or your preferred LLM
+  freeze: true
+
+aligner:
+  num_experts: 8
+  feature_dim: 1024  # Set according to Whisper encoder output
+
+# Hybrid model specific parameters
+max_prompt_tokens: 512  # Maximum number of prompt tokens for hybrid model
+use_adapter: true  # Whether to use adapter projection in hybrid model
+
+# Dataset configuration
+parquet_dirs: []  # List of parquet directory paths to load datasets from
+audio_column: "audio"  # Column name for audio data
+text_column: "text"  # Column name for text data
+sample_rate: 16000  # Audio sample rate
+
+# Dataset filtering parameters
+filter_dataset: true  # Whether to filter dataset by length
+max_audio_length: 30.0  # Maximum audio length in seconds
+max_text_length: 448  # Maximum text length in tokens
+
+training:
+  batch_size: 8
+  lr: 1e-3
+  epochs: 10
+  load_balance_loss_weight: 0.01
