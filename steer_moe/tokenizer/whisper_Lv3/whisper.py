@@ -179,6 +179,7 @@ class WhisperEncoder(nn.Module):
 
     @torch.no_grad()
     def tokenize_waveform(self, audio, kimia_whisper_clip_silence=False):
+        # audio: wav=librosa.load(wav, sr=16000)[0] && audio=torch.tensor(wav).unsqueeze(0)[:, :]
         if isinstance(audio, torch.Tensor):
             audio = audio[0]
             audio = audio.cpu().numpy()

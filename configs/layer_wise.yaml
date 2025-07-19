@@ -48,6 +48,9 @@ max_audio_length: 30.0  # seconds
 max_text_length: 448
 filter_dataset: true
 
+# Textual Prompt Configuration
+textual_prompt: "请转写以下音频内容为文字："  # Chinese prompt for ASR task
+
 # Model Configuration
 max_prompt_tokens: 512
 use_adapter: true

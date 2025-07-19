@@ -1,5 +1,12 @@
+"""
+ * author Ruitao Feng
+ * created on 16-07-2025
+ * github: https://github.com/forfrt
+"""
+
 import torch
 import torch.nn as nn
+import logging
 
 # Import WhisperEncoder from Kimi-Audio
 from .tokenizer.whisper_Lv3.whisper import WhisperEncoder
@@ -10,6 +17,10 @@ from .aligner import SteerMoEAligner
 # Import layer-wise steering
 from .layer_wise_whisper import LayerWiseSteeringWhisperEncoder
 from .efficient_layer_wise_whisper import EfficientLayerWiseSteeringWhisperEncoder
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
 
 # TODO: Import or load LLM decoder (e.g., from transformers)
 
@@ -368,88 +379,134 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         else:
             self.prompt_proj = prompt_proj
 
-    def forward(self, audio_waveform, decoder_input_ids=None, labels=None, 
+
+    def forward(self, audio_waveform=None, input_features=None, decoder_input_ids=None, labels=None, 
                 prompt_tokens_only=False, return_gating=False):
         """
         Forward pass for efficient layer-wise steering model.
         
         Args:
-            audio_waveform: Audio input tensor
-            decoder_input_ids: Text token IDs (optional for pure audio generation)
-            labels: Target labels for training (optional)
+            audio_waveform: Audio waveform input (preferred)
+            input_features: Alternative audio input (for compatibility)
+            decoder_input_ids: Text token IDs 
+            labels: Target labels for training 
             prompt_tokens_only: If True, only return prompt embeddings without text
             return_gating: If True, return gating scores for analysis
         
         Returns:
-            Model output (logits or loss depending on labels)
+            Model output with loss if labels provided, or logits/embeddings
         """
+        # Handle both input parameter names for compatibility
+        audio_input = audio_waveform if audio_waveform is not None else input_features
+        if audio_input is None:
+            raise ValueError("Either audio_waveform or input_features must be provided")
+        
         # 1. Extract continuous features from audio using efficient layer-wise steering Whisper encoder
         if return_gating:
-            h_audio, gating_scores = self.whisper_encoder.tokenize_waveform(
-                audio_waveform, return_gating=True
-            )
+            h_audio, gating_scores = self.whisper_encoder.tokenize_waveform(audio_input, return_gating=True)
         else:
-            h_audio = self.whisper_encoder.tokenize_waveform(audio_waveform)
-        # h_audio: (batch, seq_len, feature_dim)
+            h_audio = self.whisper_encoder.tokenize_waveform(audio_input)
+            gating_scores = None
+        # h_audio: (batch, audio_seq_len, feature_dim)
 
         # 2. Project to decoder dimension if needed
         if self.use_adapter and self.prompt_proj is not None:
-            prompts = self.prompt_proj(h_audio)
+            audio_prompts = self.prompt_proj(h_audio)
         else:
-            prompts = h_audio
-        # prompts: (batch, seq_len, decoder_dim)
+            audio_prompts = h_audio
+        # audio_prompts: (batch, audio_seq_len, decoder_dim)
 
         # 3. Limit prompt length if specified
         if self.max_prompt_tokens is not None:
-            prompts = prompts[:, :self.max_prompt_tokens, :]
+            audio_prompts = audio_prompts[:, :self.max_prompt_tokens, :]
 
-        # 4. Handle text embeddings and concatenation
-        if decoder_input_ids is not None:
-            # Get text embeddings from decoder
-            if hasattr(self.llm_decoder, 'model') and hasattr(self.llm_decoder.model, 'embed_tokens'):
-                # LLaMA-like decoder
-                input_embeds = self.llm_decoder.model.embed_tokens(decoder_input_ids)
-            elif hasattr(self.llm_decoder, 'transformer') and hasattr(self.llm_decoder.transformer, 'wte'):
-                # GPT-2 like decoder
-                input_embeds = self.llm_decoder.transformer.wte(decoder_input_ids)
-            else:
-                raise ValueError("Decoder embedding method not found. Adapt this part.")
-
-            # Concatenate prompts with text embeddings
-            inputs_embeds = torch.cat([prompts, input_embeds], dim=1)
-            # inputs_embeds: (batch, prompt_len + text_len, decoder_dim)
-
-            # Handle labels for training
-            if labels is not None:
-                prompt_len = prompts.size(1)
-                # Mask prompt tokens with -100 (ignored in loss)
-                labels = torch.cat([
-                    labels.new_full((labels.size(0), prompt_len), -100),
-                    labels
-                ], dim=1)
-
-            # Pass to decoder
-            output = self.llm_decoder(
-                inputs_embeds=inputs_embeds,
-                labels=labels
-            )
-        else:
-            # Pure audio generation - only use prompts
+        # 4. Handle pure audio generation case
+        if decoder_input_ids is None:
             if prompt_tokens_only:
                 if return_gating:
-                    return prompts, gating_scores
+                    return audio_prompts, gating_scores
                 else:
-                    return prompts
+                    return audio_prompts
             else:
-                # For generation, we'll handle this in the generation loop
+                # For generation without text input
                 if return_gating:
-                    return prompts, gating_scores
+                    return audio_prompts, gating_scores
                 else:
-                    return prompts
+                    return audio_prompts
 
+        # 5. Get text embeddings from decoder
+        if hasattr(self.llm_decoder, 'model') and hasattr(self.llm_decoder.model, 'embed_tokens'):
+            # LLaMA-like decoder (Qwen, LLaMA, etc.)
+            text_embeds = self.llm_decoder.model.embed_tokens(decoder_input_ids)
+        elif hasattr(self.llm_decoder, 'transformer') and hasattr(self.llm_decoder.transformer, 'wte'):
+            # GPT-2 like decoder
+            text_embeds = self.llm_decoder.transformer.wte(decoder_input_ids)
+        elif hasattr(self.llm_decoder, 'get_input_embeddings'):
+            # Generic approach
+            text_embeds = self.llm_decoder.get_input_embeddings()(decoder_input_ids)
+        else:
+            raise ValueError("Could not find embedding method for decoder. Please adapt for your LLM.")
+
+        # 6. Concatenate audio prompts with text embeddings
+        # Format: [audio_prompts, text_embeds]
+        inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)
+        # inputs_embeds: (batch, audio_seq_len + text_seq_len, decoder_dim)
+
+        # 7. Handle labels for training
+        if labels is not None:
+            audio_prompt_len = audio_prompts.size(1)
+            
+            # Create attention mask for the combined sequence
+            # We want to attend to both audio prompts and text, but only compute loss on text
+            batch_size, total_seq_len = inputs_embeds.shape[:2]
+            attention_mask = torch.ones(batch_size, total_seq_len, device=inputs_embeds.device, dtype=torch.long)
+            
+            # Mask audio prompt tokens with -100 (ignored in loss computation)
+            # The labels should correspond only to the text portion
+            if labels.size(1) != text_embeds.size(1):
+                # If labels length doesn't match text length, truncate or pad
+                if labels.size(1) > text_embeds.size(1):
+                    labels = labels[:, :text_embeds.size(1)]
+                else:
+                    # Pad with -100
+                    pad_length = text_embeds.size(1) - labels.size(1)
+                    labels = torch.cat([
+                        labels,
+                        labels.new_full((labels.size(0), pad_length), -100)
+                    ], dim=1)
+            
+            # Prepend -100 tokens for audio prompts (these will be ignored in loss)
+            full_labels = torch.cat([
+                labels.new_full((labels.size(0), audio_prompt_len), -100),
+                labels
+            ], dim=1)
+            
+            # Pass to decoder with masked labels
+            output = self.llm_decoder(
+                inputs_embeds=inputs_embeds,
+                attention_mask=attention_mask,
+                labels=full_labels
+            )
+        else:
+            # No labels - inference mode
+            output = self.llm_decoder(
+                inputs_embeds=inputs_embeds
+            )
+
+        # 8. Return output with gating scores if requested
         if return_gating:
-            return output, gating_scores
-        return output
+            if hasattr(output, 'loss'):
+                # Training mode - return loss and gating scores
+                return {
+                    'loss': output.loss,
+                    'logits': output.logits,
+                    'gating_scores': gating_scores
+                }
+            else:
+                # Inference mode
+                return output, gating_scores
+        else:
+            return output
 
     def get_steering_analysis(self, gating_scores):
         """
@@ -478,7 +535,7 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
             return torch.device("cpu")
 
 
-if __name__ == "__main__":
+def hybrid_model_test():
     # Initialize model
     model = SteerMoEHybridModel(
         whisper_encoder=whisper_encoder,
@@ -510,3 +567,40 @@ if __name__ == "__main__":
         decoder_input_ids=instruction_tokens + response_tokens,
         labels=response_labels
     )
+
+def extract_whisper_feat(self, wav: torch.Tensor | str):
+    if isinstance(wav, str):
+        wav = librosa.load(wav, sr=16000)[0]
+
+        wav_tensor = torch.tensor(wav).unsqueeze(0)[:, :]
+    elif isinstance(wav, torch.Tensor):
+        wav_tensor = wav
+    else:
+        raise ValueError(f"Invalid wav type: {type(wav)}")
+    assert self.whisper_model is not None
+    wav_tensor = wav_tensor.to(torch.cuda.current_device())
+    continous_feature = self.whisper_model.tokenize_waveform(wav_tensor)
+    continous_feature = continous_feature.reshape(
+        continous_feature.shape[0],
+        int(continous_feature.shape[1] // 4),
+        continous_feature.shape[2] * 4,
+    )
+    return continous_feature
+
+if __name__ == "__main__":
+
+    test_audio="/root/autodl-nas/ruitao/SteerMoE/tests/output_audio.wav"
+    input_features=extract_whisper_feat(test_audio)
+    logging.info(f"input_features shape: {input_features.shape}")
+    steer_moe_model=SteerMoEEfficientLayerWiseModel(
+        whisper_encoder_path="/root/autodl-nas/ruitao/SteerMoE/steer_moe/tokenizer/whisper_Lv3/whisper_large-v2",
+        llm_decoder=llm_decoder,
+        num_experts=8,
+        prompt_proj=None,
+        max_prompt_tokens=512,
+    )
+    output=steer_moe_model(input_features)
+    logging.info(f"output shape: {output.shape}")
+
+
+    

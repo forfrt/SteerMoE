@@ -1,3 +1,9 @@
+"""
+ * author Ruitao Feng
+ * created on 16-07-2025
+ * github: https://github.com/forfrt
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -136,15 +142,123 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
     def tokenize_waveform(self, audio, return_gating=False):
         """
         Tokenize waveform with efficient layer-wise steering.
-        """
-        # This is a simplified version - in practice, you'd need to integrate with the original
-        # tokenize_waveform method from the WhisperEncoder class
+        This method integrates with the original WhisperEncoder.tokenize_waveform 
+        but applies steering during the encoding process.
         
-        # For now, assume audio is already processed to mel spectrogram
-        if return_gating:
-            return self.forward(audio, return_gating=True)
+        Args:
+            audio: Audio waveform tensor
+            return_gating: Whether to return gating scores for analysis
+            
+        Returns:
+            Steered audio features, optionally with gating scores
+        """
+        # Use the original encoder's tokenize_waveform method to get mel spectrogram
+        # and then apply our layer-wise steering during encoding
+        
+        # First, get the mel spectrogram using the original encoder's preprocessing
+        with torch.no_grad():
+            if hasattr(self.original_encoder, 'tokenize_waveform'):
+                # Use original tokenize_waveform to get properly formatted features
+                mel_features = self.original_encoder.tokenize_waveform(audio)
+                # mel_features shape: (batch, seq_len, feature_dim)
+            else:
+                # Fallback: assume audio is already processed mel spectrogram
+                mel_features = audio
+        
+        # Now apply our layer-wise steering to the mel features
+        # We need to process through the speech encoder with steering
+        if hasattr(self.original_encoder, 'speech_encoder'):
+            # Process mel features through our steered encoder layers
+            steered_features = self._forward_with_steering(mel_features, return_gating)
         else:
-            return self.forward(audio)
+            # Fallback to direct forward
+            steered_features = self.forward(mel_features, return_gating)
+            
+        return steered_features
+    
+    def _forward_with_steering(self, mel_features, return_gating=False):
+        """
+        Forward pass through the speech encoder with steering applied.
+        
+        Args:
+            mel_features: Mel spectrogram features from original encoder
+            return_gating: Whether to return gating scores
+            
+        Returns:
+            Steered features with optional gating scores
+        """
+        # Get the speech encoder
+        if hasattr(self.original_encoder, 'speech_encoder'):
+            speech_encoder = self.original_encoder.speech_encoder
+        else:
+            speech_encoder = self.original_encoder
+            
+        # Apply initial processing (conv layers, positional embedding, etc.)
+        x = mel_features
+        
+        # If the speech encoder has conv layers and embeddings, apply them first
+        if hasattr(speech_encoder, 'conv1'):
+            x = torch.nn.functional.gelu(speech_encoder.conv1(x.transpose(1, 2)))
+            x = torch.nn.functional.gelu(speech_encoder.conv2(x))
+            x = x.transpose(1, 2)
+            
+        if hasattr(speech_encoder, 'embed_positions'):
+            positions = speech_encoder.embed_positions.weight[:x.size(1)]
+            x = (x + positions) * speech_encoder.embed_scale
+            
+        # Apply dropout if present
+        if hasattr(speech_encoder, 'dropout'):
+            x = speech_encoder.dropout(x)
+        
+        # Now process through layers with steering
+        gating_scores_list = []
+        
+        # Get the encoder layers
+        if hasattr(speech_encoder, 'layers'):
+            encoder_layers = speech_encoder.layers
+        else:
+            encoder_layers = []
+            
+        for layer_idx, layer in enumerate(encoder_layers):
+            if layer_idx >= self.num_layers:
+                # More layers than we have steering for, process normally
+                x = layer(x)
+                continue
+                
+            # Apply original layer
+            layer_output = layer(x)
+            
+            # Compute steering for this layer using the single router
+            router_output = self.router(layer_output)  # (batch, seq_len, num_experts * num_layers)
+            
+            # Extract gating scores for this layer
+            start_idx = layer_idx * self.num_experts
+            end_idx = (layer_idx + 1) * self.num_experts
+            layer_gating_logits = router_output[:, :, start_idx:end_idx]  # (batch, seq_len, num_experts)
+            
+            # Apply softmax to get gating scores
+            gating_scores = F.softmax(layer_gating_logits, dim=-1)
+            
+            # Get steering vectors for this layer
+            steering_vectors = self.steering_vectors[layer_idx]  # (num_experts, feature_dim)
+            layer_scale = self.layer_scales[layer_idx]
+            
+            # Compute steering adjustment
+            steering_adjustment = torch.einsum('bte,ef->btf', gating_scores, steering_vectors)
+            
+            # Apply steering with layer-specific scaling
+            x = layer_output + layer_scale * steering_adjustment
+            
+            # Store gating scores for analysis
+            gating_scores_list.append(gating_scores)
+        
+        # Apply final layer norm if exists
+        if hasattr(speech_encoder, 'layer_norm'):
+            x = speech_encoder.layer_norm(x)
+            
+        if return_gating:
+            return x, gating_scores_list
+        return x
     
     def get_steering_analysis(self, gating_scores_list):
         """

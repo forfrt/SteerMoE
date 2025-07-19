@@ -1,3 +1,9 @@
+"""
+ * author Ruitao Feng
+ * created on 16-07-2025
+ * github: https://github.com/forfrt
+"""
+
 import yaml
 import torch
 import torch.nn as nn
@@ -7,7 +13,9 @@ from datasets import Audio, load_dataset, concatenate_datasets, DatasetDict, loa
 import tqdm
 import os
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
+from dataclasses import dataclass
+from typing import List, Dict, Union
 
 # Import our models
 import sys
@@ -16,7 +24,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from steer_moe.models import SteerMoEEfficientLayerWiseModel
 from steer_moe.efficient_layer_wise_whisper import EfficientLayerWiseSteeringWhisperEncoder
-from steer_moe.utils import load_parquet_datasets, prepare_dataset
+from steer_moe.utils import load_parquet_datasets, prepare_dataset, DataCollatorSpeechSeqSeqWithPadding
 from steer_moe.tokenizer.whisper_Lv3.whisper import WhisperEncoder
 
 
@@ -193,6 +201,11 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
 
     print("Loading tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])
+    
+    # Add padding token if not present
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
 
     # Create layer-wise steering Whisper encoder
     print("Creating layer-wise steering Whisper encoder...")
@@ -240,33 +253,133 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
             max_text_length=config.get('max_text_length', 448)
         )
 
-    # Prepare dataset
-    # print("Preparing dataset...")
-    # if not isinstance(dataset['train'].features[audio_column], Audio):
-    #     dataset['train'] = dataset['train'].cast_column(audio_column, Audio(sampling_rate=sample_rate))
+    # Check if dataset is already preprocessed or needs processing
+    train_features = dataset['train'].features
+    is_preprocessed = 'input_features' in train_features and 'labels' in train_features
+    is_raw = audio_column in train_features and text_column in train_features
+    
+    print(f"Dataset features: {list(train_features.keys())}")
+    print(f"Is preprocessed: {is_preprocessed}, Is raw: {is_raw}")
 
-    # def _prepare(batch):
-    #     return prepare_dataset(batch, audio_column, text_column, whisper_encoder, tokenizer, sample_rate)
-
-    # processed_dataset = dataset['train'].map(_prepare, remove_columns=dataset['train'].column_names)
-
-    # Create validation split
-    if 'validation' in dataset:
-        processed_val = dataset['validation']
+    # Prepare dataset based on its current state
+    if is_preprocessed:
+        print("Dataset is already preprocessed with 'input_features' and 'labels'")
+        # Dataset is already processed, use directly
         processed_dataset = dataset['train']
-        # processed_val = dataset['validation'].map(_prepare, remove_columns=dataset['validation'].column_names)
+        
+        # Create validation split if needed
+        if 'validation' in dataset:
+            processed_val = dataset['validation']
+        else:
+            # Split train into train/val
+            split_dataset = processed_dataset.train_test_split(test_size=0.05, seed=42)
+            processed_val = split_dataset['test']
+            processed_dataset = split_dataset['train']
+            
+        # Create data collator for preprocessed data
+        textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")
+        
+        # For preprocessed data, we need a different data collator that handles input_features and labels
+        @dataclass
+        class DataCollatorForPreprocessedSpeechSeq2Seq:
+            """Data collator for already preprocessed speech-to-text data."""
+            tokenizer: Any
+            
+            def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+                # Handle input_features (audio)
+                input_features = [torch.tensor(feature["input_features"], dtype=torch.float32) for feature in features]
+                # Pad audio features to same length
+                max_audio_len = max(feat.size(0) for feat in input_features)
+                padded_audio = []
+                for feat in input_features:
+                    if feat.size(0) < max_audio_len:
+                        # Pad with zeros
+                        pad_length = max_audio_len - feat.size(0)
+                        padded_feat = torch.nn.functional.pad(feat, (0, 0, 0, pad_length))
+                    else:
+                        padded_feat = feat
+                    padded_audio.append(padded_feat)
+                batch_audio = torch.stack(padded_audio)
+                
+                # Handle labels (text tokens)
+                labels = [torch.tensor(feature["labels"], dtype=torch.long) for feature in features]
+                # Pad labels
+                max_label_len = max(len(label) for label in labels)
+                padded_labels = []
+                for label in labels:
+                    if len(label) < max_label_len:
+                        # Pad with -100
+                        pad_length = max_label_len - len(label)
+                        padded_label = torch.cat([label, torch.full((pad_length,), -100, dtype=torch.long)])
+                    else:
+                        padded_label = label
+                    padded_labels.append(padded_label)
+                batch_labels = torch.stack(padded_labels)
+                
+                return {
+                    "audio_waveform": batch_audio,  # This will be treated as preprocessed features
+                    "decoder_input_ids": batch_labels.clone(),  # Use labels as decoder input
+                    "labels": batch_labels,
+                }
+        
+        data_collator = DataCollatorForPreprocessedSpeechSeq2Seq(tokenizer=tokenizer)
+        
+    elif is_raw:
+        print("Dataset contains raw audio and text, processing...")
+        # Dataset needs processing
+        # Prepare dataset
+        print("Preparing dataset...")
+        if not isinstance(dataset['train'].features[audio_column], Audio):
+            dataset['train'] = dataset['train'].cast_column(audio_column, Audio(sampling_rate=sample_rate))
+
+        def _prepare(batch):
+            return prepare_dataset(batch, audio_column, text_column, whisper_encoder, tokenizer, sample_rate)
+
+        processed_dataset = dataset['train'].map(_prepare, remove_columns=dataset['train'].column_names)
+
+        # Create validation split
+        if 'validation' in dataset:
+            processed_val = dataset['validation'].map(_prepare, remove_columns=dataset['validation'].column_names)
+        else:
+            # Split train into train/val
+            split_dataset = processed_dataset.train_test_split(test_size=0.05, seed=42)
+            processed_val = split_dataset['test']
+            processed_dataset = split_dataset['train']
+
+        # Create data collator with textual prompt support for raw data
+        textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")
+        data_collator = DataCollatorSpeechSeqSeqWithPadding(
+            tokenizer=tokenizer,
+            textual_prompt=textual_prompt,
+            max_length=config.get('max_text_length', 448),
+            audio_column="audio_features",
+            text_column="input_ids"
+        )
     else:
-        # Split train into train/val
-        processed_dataset = dataset['train'].train_test_split(test_size=0.05, seed=42)
-        processed_val = processed_dataset['test']
-        processed_dataset = processed_dataset['train']
+        raise ValueError(f"Dataset format not recognized. Available features: {list(train_features.keys())}. "
+                        f"Expected either raw data with '{audio_column}' and '{text_column}' columns "
+                        f"or preprocessed data with 'input_features' and 'labels' columns.")
 
     # Create custom compute metrics function
     def compute_metrics_trainer(eval_pred):
         logits, labels = eval_pred
         preds = logits.argmax(-1)
-        pred_str = tokenizer.batch_decode(preds, skip_special_tokens=True)
-        label_str = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        
+        # Decode predictions and labels
+        pred_str = []
+        label_str = []
+        
+        for pred_seq, label_seq in zip(preds, labels):
+            # Remove padding and special tokens from predictions
+            pred_tokens = pred_seq[pred_seq != tokenizer.pad_token_id]
+            pred_text = tokenizer.decode(pred_tokens, skip_special_tokens=True)
+            pred_str.append(pred_text)
+            
+            # Remove -100 tokens from labels
+            label_tokens = label_seq[label_seq != -100]
+            label_text = tokenizer.decode(label_tokens, skip_special_tokens=True)
+            label_str.append(label_text)
+        
         cer_metric = load_metric('cer')
         wer_metric = load_metric('wer')
         cer = cer_metric.compute(predictions=pred_str, references=label_str)
@@ -290,12 +403,13 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         greater_is_better=False,
         save_total_limit=config.get('save_total_limit', 2),
         resume_from_checkpoint=resume_from_checkpoint,
-        gradient_clipping=config.get('gradient_clipping', 1.0),
         warmup_steps=config.get('warmup_steps', 0),
         weight_decay=config.get('weight_decay', 0.01),
         logging_steps=config.get('logging_steps', 10),
         eval_steps=config.get('eval_steps', 500),
         save_steps=config.get('save_steps', 1000),
+        dataloader_drop_last=True,  # Ensure consistent batch sizes
+        remove_unused_columns=False,  # Keep all columns for our custom data collator
     )
 
     # Create callbacks
@@ -322,6 +436,7 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         args=training_args,
         train_dataset=processed_dataset,
         eval_dataset=processed_val,
+        data_collator=data_collator,
         compute_metrics=compute_metrics_trainer,
         callbacks=callbacks,
     )

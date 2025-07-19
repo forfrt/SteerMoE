@@ -1,3 +1,9 @@
+"""
+ * author Ruitao Feng
+ * created on 16-07-2025
+ * github: https://github.com/forfrt
+"""
+
 #!/usr/bin/env python3
 """
 Example training script for SteerMoE models.

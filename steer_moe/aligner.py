@@ -1,3 +1,10 @@
+"""
+ * author Ruitao Feng
+ * created on 16-07-2025
+ * github: https://github.com/forfrt
+"""
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

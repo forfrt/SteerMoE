@@ -1,11 +1,5 @@
 """
  * author Ruitao Feng
- * created on 15-07-2025
- * github: https://github.com/forfrt
-"""
-
-"""
- * author Ruitao Feng
  * created on 21-03-2025
  * github: https://github.com/forfrt
 """
@@ -55,6 +49,50 @@ data_pipe = HFDataProcessorPipeline(feature_extractor=feature_extractor, tokeniz
 # dataset = dataset.map(data_pipe.prepare_dataset, remove_columns=dataset.column_names)
 # dataset.save_to_disk("/root/autodl-tmp/wys/whisper/tts_test/train_terms_20231224_processed")
 # exit()
+
+def prepare_dataset(batch, audio_column, text_column, whisper_processor, tokenizer, sample_rate=16000):
+    """
+    Map function to process a batch: loads audio, extracts features, tokenizes text.
+    Args:
+        batch: dict with audio and text columns
+        audio_column: str, name of audio file path column
+        text_column: str, name of text column
+        whisper_processor: callable, e.g. WhisperEncoder.tokenize_waveform
+        tokenizer: HuggingFace tokenizer for text
+        sample_rate: int, target sample rate
+    Returns:
+        dict with processed audio features and tokenized text
+    """
+    # Load audio
+    audio_path = batch[audio_column]
+    # If using datasets.Audio, batch[audio_column] may be a dict with 'array' and 'sampling_rate'
+    if isinstance(audio_path, dict) and 'array' in audio_path:
+        waveform = torch.tensor(audio_path['array'], dtype=torch.float32)
+        if audio_path['sampling_rate'] != sample_rate:
+            import torchaudio
+            waveform = torchaudio.functional.resample(waveform, audio_path['sampling_rate'], sample_rate)
+    else:
+        import soundfile as sf
+        waveform, sr = sf.read(audio_path)
+        waveform = torch.tensor(waveform, dtype=torch.float32)
+        if sr != sample_rate:
+            import torchaudio
+            waveform = torchaudio.functional.resample(waveform, sr, sample_rate)
+    if waveform.ndim > 1:
+        waveform = waveform.mean(dim=-1)  # convert to mono
+    waveform = waveform.unsqueeze(0)  # (1, T)
+    # Extract audio features
+    audio_features = whisper_processor.tokenize_waveform(waveform)
+    # Tokenize text
+    text = batch[text_column]
+    text_tokens = tokenizer(text, return_tensors='pt', padding='max_length', truncation=True)
+    
+    return {
+        'audio_features': audio_features.squeeze(0),  # Remove batch dimension
+        'input_ids': text_tokens['input_ids'].squeeze(0),
+        'attention_mask': text_tokens['attention_mask'].squeeze(0),
+        'text': text
+    }
 
 
 import argparse
@@ -122,8 +160,13 @@ if __name__ == '__main__':
             continue
         tmp_dataset = tmp_dataset.cast_column("audio", Audio(sampling_rate=16000))
 
+
+        def _prepare(batch):
+            return prepare_dataset(batch, 'audio', 'text', tokenizer, llm_tokenizer, 'sample_rate')
+
         try:
-            tmp_dataset = tmp_dataset.map(data_pipe.prepare_dataset, remove_columns=tmp_dataset.column_names, num_proc=100)
+            tmp_dataset = tmp_dataset.map(_prepare, remove_columns=tmp_dataset.column_names)
+            # tmp_dataset = tmp_dataset.map(data_pipe.prepare_dataset, remove_columns=tmp_dataset.column_names, num_proc=100)
         except:
             logging.error(f"batch: {batch}, i: {i}, offset: {offset}")
             logging.error(traceback.format_exc())

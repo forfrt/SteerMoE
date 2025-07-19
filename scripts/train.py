@@ -1,3 +1,9 @@
+"""
+ * author Ruitao Feng
+ * created on 16-07-2025
+ * github: https://github.com/forfrt
+"""
+
 import yaml
 import torch
 from steer_moe.models import SteerMoEModel, SteerMoEHybridModel
