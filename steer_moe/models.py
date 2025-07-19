@@ -386,8 +386,8 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         Forward pass for efficient layer-wise steering model.
         
         Args:
-            audio_waveform: Audio waveform input (preferred)
-            input_features: Alternative audio input (for compatibility)
+            audio_waveform: Raw audio waveform input OR preprocessed audio features
+            input_features: Alternative preprocessed audio input (for compatibility)
             decoder_input_ids: Text token IDs 
             labels: Target labels for training 
             prompt_tokens_only: If True, only return prompt embeddings without text
@@ -401,12 +401,23 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         if audio_input is None:
             raise ValueError("Either audio_waveform or input_features must be provided")
         
-        # 1. Extract continuous features from audio using efficient layer-wise steering Whisper encoder
-        if return_gating:
-            h_audio, gating_scores = self.whisper_encoder.tokenize_waveform(audio_input, return_gating=True)
-        else:
-            h_audio = self.whisper_encoder.tokenize_waveform(audio_input)
+        # 1. Process audio input - check if it's raw waveform or preprocessed features
+        if audio_input.dim() == 2 and audio_input.size(-1) == 1280:
+            # Already preprocessed Whisper features (batch, seq_len, feature_dim)
+            h_audio = audio_input
             gating_scores = None
+        elif audio_input.dim() == 3 and audio_input.size(-1) == 1280:
+            # Preprocessed features with batch dimension (batch, seq_len, feature_dim)
+            h_audio = audio_input
+            gating_scores = None
+        else:
+            # Raw waveform - process through whisper encoder with steering
+            if return_gating:
+                h_audio, gating_scores = self.whisper_encoder.tokenize_waveform(audio_input, return_gating=True)
+            else:
+                h_audio = self.whisper_encoder.tokenize_waveform(audio_input)
+                gating_scores = None
+        
         # h_audio: (batch, audio_seq_len, feature_dim)
 
         # 2. Project to decoder dimension if needed

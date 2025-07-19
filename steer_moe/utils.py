@@ -99,28 +99,29 @@ def prepare_dataset(batch, audio_column, text_column, whisper_processor, tokeniz
 @dataclass
 class DataCollatorSpeechSeqSeqWithPadding:
     """
-    Enhanced data collator for SteerMoE model that handles audio and text inputs with optional textual prompts.
+    Enhanced data collator for SteerMoE model that handles preprocessed audio features and labels.
+    Works with preprocessed datasets that have 'input_features' and 'labels' columns.
     """
     tokenizer: Any
     textual_prompt: Optional[str] = None
     max_length: int = 512
-    audio_column: str = "audio_features"
-    text_column: str = "input_ids"
+    audio_column: str = "input_features"  # Preprocessed audio features
+    text_column: str = "labels"  # Preprocessed tokenized labels
     return_attention_mask: bool = True
     
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         """
-        Collate a batch of features for SteerMoE training.
+        Collate a batch of preprocessed features for SteerMoE training.
         
         Args:
-            features: List of dictionaries with audio_features, input_ids, etc.
+            features: List of dictionaries with input_features, labels, etc.
             
         Returns:
             Batch dictionary with padded tensors
         """
         batch_size = len(features)
         
-        # Handle audio features (waveforms)
+        # Handle preprocessed audio features
         audio_features = []
         for feature in features:
             if self.audio_column in feature:
@@ -132,44 +133,70 @@ class DataCollatorSpeechSeqSeqWithPadding:
             else:
                 raise KeyError(f"Expected '{self.audio_column}' in features")
         
-        # Pad audio features to same length
+        # Pad audio features to same length (these are already processed Whisper features)
         if audio_features:
-            max_audio_len = max(feat.size(-1) for feat in audio_features if feat.numel() > 0)
+            # Find max sequence length
+            max_audio_seq_len = max(feat.size(0) if feat.dim() == 2 else feat.size(1) for feat in audio_features if feat.numel() > 0)
             padded_audio = []
+            
             for feat in audio_features:
                 if feat.numel() == 0:
-                    # Handle empty audio
-                    padded_feat = torch.zeros(max_audio_len, dtype=torch.float32)
+                    # Handle empty audio - create zero tensor with proper dimensions
+                    # Assume feature dimension is 1280 for Whisper large
+                    padded_feat = torch.zeros(max_audio_seq_len, 1280, dtype=torch.float32)
                 else:
-                    if feat.dim() == 1:
-                        feat = feat.unsqueeze(0)  # Add batch dimension if needed
-                    current_len = feat.size(-1)
-                    if current_len < max_audio_len:
-                        # Pad
-                        pad_length = max_audio_len - current_len
-                        padded_feat = torch.nn.functional.pad(feat, (0, pad_length))
+                    # Ensure correct shape (seq_len, feature_dim)
+                    if feat.dim() == 3:
+                        feat = feat.squeeze(0)  # Remove batch dimension if present
+                    elif feat.dim() == 1:
+                        # If 1D, assume it's flattened and reshape
+                        feat_dim = 1280  # Whisper large feature dimension
+                        seq_len = feat.size(0) // feat_dim
+                        feat = feat.view(seq_len, feat_dim)
+                    
+                    current_seq_len = feat.size(0)
+                    if current_seq_len < max_audio_seq_len:
+                        # Pad sequence dimension
+                        pad_length = max_audio_seq_len - current_seq_len
+                        padded_feat = torch.cat([
+                            feat,
+                            torch.zeros(pad_length, feat.size(1), dtype=torch.float32)
+                        ], dim=0)
                     else:
-                        # Truncate
-                        padded_feat = feat[..., :max_audio_len]
+                        # Truncate if too long
+                        padded_feat = feat[:max_audio_seq_len]
+                
                 padded_audio.append(padded_feat)
+            
             batch_audio = torch.stack(padded_audio)
         else:
-            batch_audio = torch.empty(batch_size, 0, dtype=torch.float32)
+            batch_audio = torch.empty(batch_size, 0, 1280, dtype=torch.float32)
         
-        # Handle text input_ids and create decoder_input_ids
-        input_ids = []
+        # Handle preprocessed labels (already tokenized)
         labels = []
+        decoder_input_ids = []
         
         for feature in features:
             if self.text_column in feature:
-                text_ids = feature[self.text_column]
-                if isinstance(text_ids, torch.Tensor):
-                    text_ids = text_ids.squeeze()
+                label_ids = feature[self.text_column]
+                if isinstance(label_ids, torch.Tensor):
+                    label_ids = label_ids.squeeze()
                 else:
-                    text_ids = torch.tensor(text_ids, dtype=torch.long).squeeze()
+                    label_ids = torch.tensor(label_ids, dtype=torch.long).squeeze()
                 
-                # Create decoder input and labels
-                if self.textual_prompt is not None:
+                # Remove padding tokens and special tokens for processing
+                if isinstance(label_ids, torch.Tensor):
+                    # Remove padding tokens (-100 and pad_token_id)
+                    valid_mask = (label_ids != -100) & (label_ids != self.tokenizer.pad_token_id)
+                    if valid_mask.any():
+                        clean_labels = label_ids[valid_mask]
+                    else:
+                        clean_labels = torch.tensor([], dtype=torch.long)
+                else:
+                    clean_labels = torch.tensor(label_ids, dtype=torch.long)
+                
+                # Create decoder input with optional textual prompt
+                if self.textual_prompt is not None and len(clean_labels) > 0:
                     # Tokenize the textual prompt
                     prompt_tokens = self.tokenizer.encode(
                         self.textual_prompt, 
@@ -177,32 +204,32 @@ class DataCollatorSpeechSeqSeqWithPadding:
                         return_tensors="pt"
                     ).squeeze(0)
                     
-                    # Combine prompt + text for decoder input
-                    decoder_input = torch.cat([prompt_tokens, text_ids])
+                    # Combine prompt + clean labels for decoder input
+                    decoder_input = torch.cat([prompt_tokens, clean_labels])
                     
-                    # Labels should be the text only (prompt gets -100 in the model)
-                    label = text_ids.clone()
+                    # Labels should be the original clean labels only (prompt gets masked in model)
+                    label = clean_labels.clone()
                 else:
-                    # No prompt, use text directly
-                    decoder_input = text_ids.clone()
-                    label = text_ids.clone()
+                    # No prompt, use clean labels directly
+                    decoder_input = clean_labels.clone()
+                    label = clean_labels.clone()
                 
-                input_ids.append(decoder_input)
+                decoder_input_ids.append(decoder_input)
                 labels.append(label)
             else:
-                # No text provided - create empty tensors
-                input_ids.append(torch.tensor([], dtype=torch.long))
+                # No labels provided - create empty tensors
+                decoder_input_ids.append(torch.tensor([], dtype=torch.long))
                 labels.append(torch.tensor([], dtype=torch.long))
         
         # Pad text sequences
-        if input_ids and any(len(ids) > 0 for ids in input_ids):
+        if decoder_input_ids and any(len(ids) > 0 for ids in decoder_input_ids):
             # Pad decoder_input_ids
-            max_text_len = min(max(len(ids) for ids in input_ids if len(ids) > 0), self.max_length)
+            max_text_len = min(max(len(ids) for ids in decoder_input_ids if len(ids) > 0), self.max_length)
             padded_input_ids = []
             padded_labels = []
             attention_masks = []
             
-            for i, (input_seq, label_seq) in enumerate(zip(input_ids, labels)):
+            for input_seq, label_seq in zip(decoder_input_ids, labels):
                 if len(input_seq) == 0:
                     # Empty sequence
                     padded_input = torch.full((max_text_len,), self.tokenizer.pad_token_id, dtype=torch.long)
@@ -212,15 +239,16 @@ class DataCollatorSpeechSeqSeqWithPadding:
                     # Truncate if too long
                     if len(input_seq) > max_text_len:
                         input_seq = input_seq[:max_text_len]
-                        label_seq = label_seq[:max_text_len]
+                        label_seq = label_seq[:max_text_len] if len(label_seq) > max_text_len else label_seq
                     
-                    # Pad if too short
+                    # Pad input sequence
                     pad_length = max_text_len - len(input_seq)
                     padded_input = torch.cat([
                         input_seq,
                         torch.full((pad_length,), self.tokenizer.pad_token_id, dtype=torch.long)
                     ])
                     
+                    # Pad label sequence
                     label_pad_length = max_text_len - len(label_seq)
                     padded_label = torch.cat([
                         label_seq,
@@ -246,9 +274,9 @@ class DataCollatorSpeechSeqSeqWithPadding:
             batch_labels = torch.empty(batch_size, 0, dtype=torch.long)
             batch_attention_mask = torch.empty(batch_size, 0, dtype=torch.long)
         
-        # Create final batch
+        # Create final batch - use different key name for audio to match model expectations
         batch = {
-            "audio_waveform": batch_audio,
+            "audio_waveform": batch_audio,  # Model expects audio_waveform parameter
             "decoder_input_ids": batch_input_ids,
             "labels": batch_labels,
         }

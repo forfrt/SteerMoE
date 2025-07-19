@@ -23,7 +23,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
 
 # Init feature extractor and tokenizer
-from transformers import WhisperFeatureExtractor, WhisperTokenizer
+from transformers import WhisperFeatureExtractor, WhisperTokenizer, AutoTokenizer
 from setting import model_path, tokenizer_path
 def download_from_cos(path,tag='train'):
     audio_path = path
@@ -43,6 +43,7 @@ processed_data = []
 feature_extractor = WhisperFeatureExtractor.from_pretrained(model_path["whisper_large-v2"])
 tokenizer = WhisperTokenizer.from_pretrained(pretrained_model_name_or_path=model_path["whisper_large-v2"],
                                              language="chinese", task="transcribe")
+llm_tokenizer=AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])
 data_pipe = HFDataProcessorPipeline(feature_extractor=feature_extractor, tokenizer=tokenizer)
 # dataset = load_dataset("parquet", data_files="/root/autodl-tmp/wys/whisper/tts_test/train_terms_20231224.parquet", split='train', cache_dir='.cache')
 # dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
