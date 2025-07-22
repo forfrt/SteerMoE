@@ -164,7 +164,6 @@ DEFAULT_CALLBACKS	whisper_train/main_word_correct_clips.py	/^DEFAULT_CALLBACKS =
 DEFAULT_OPSET	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/onnx/export.py	/^DEFAULT_OPSET = 15$/;"	v
 DEFAULT_PROGRESS_CALLBACK	whisper_train/main_word_correct_clips.py	/^    DEFAULT_PROGRESS_CALLBACK = NotebookProgressCallback$/;"	v
 DEFAULT_PROGRESS_CALLBACK	whisper_train/main_word_correct_clips.py	/^DEFAULT_PROGRESS_CALLBACK = ProgressCallback$/;"	v
-DataCollatorForPreprocessedSpeechSeq2Seq	scripts/train_layer_wise.py	/^        class DataCollatorForPreprocessedSpeechSeq2Seq:$/;"	c	function:train_layer_wise_steermoe	file:
 DataCollatorSpeechSeq2SeqWithPadding	whisper_train/modules.py	/^class DataCollatorSpeechSeq2SeqWithPadding:$/;"	c
 DataCollatorSpeechSeqSeqWithPadding	steer_moe/utils.py	/^class DataCollatorSpeechSeqSeqWithPadding:$/;"	c
 DataCollatorSpeechSeqSeqWithPaddingLegacy	steer_moe/utils.py	/^class DataCollatorSpeechSeqSeqWithPaddingLegacy:$/;"	c
@@ -520,7 +519,6 @@ _CHECKPOINT_FOR_DOC	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^_CHECK
 _CONFIG_FOR_DOC	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^_CONFIG_FOR_DOC = "WhisperConfig"$/;"	v
 _CONFIG_FOR_DOC	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^_CONFIG_FOR_DOC = "WhisperConfig"$/;"	v
 _HIDDEN_STATES_START_POSITION	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^_HIDDEN_STATES_START_POSITION = 1$/;"	v
-__call__	scripts/train_layer_wise.py	/^            def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dic/;"	m	class:train_layer_wise_steermoe.DataCollatorForPreprocessedSpeechSeq2Seq	typeref:typename:Dict[str,torch.Tensor]
 __call__	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/data/text_mel_datamodule.py	/^    def __call__(self, batch):$/;"	m	class:TextMelBatchCollate
 __call__	steer_moe/utils.py	/^    def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, t/;"	m	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:Dict[str,torch.Tensor]
 __call__	steer_moe/utils.py	/^    def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, t/;"	m	class:DataCollatorSpeechSeqSeqWithPaddingLegacy	typeref:typename:Dict[str,torch.Tensor]
@@ -839,7 +837,6 @@ _postprocess_outputs	steer_moe/tokenizer/glm4/speech_tokenizer/generation_whispe
 _pounds_re	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/numbers.py	/^_pounds_re = re.compile(r"£([0-9\\,]*[0-9]+)")$/;"	v
 _prepare	scripts/train.py	/^    def _prepare(batch):$/;"	f	function:prepare_asr_dataset	file:
 _prepare	scripts/train.py	/^    def _prepare(batch):$/;"	f	function:train_with_deepspeed	file:
-_prepare	scripts/train_layer_wise.py	/^        def _prepare(batch):$/;"	f	function:train_layer_wise_steermoe	file:
 _prepare	scripts/train_layer_wise.py	/^    def _prepare(batch):$/;"	f	function:prepare_asr_dataset	file:
 _prepare	whisper_train/pre_process_word_correct_data.py	/^        def _prepare(batch):$/;"	f
 _prepare_4d_causal_attention_mask_with_cache_position	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^def _prepare_4d_causal_attention_mask_with_cache_position($/;"	f
@@ -917,7 +914,7 @@ assert_model_downloaded	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/u
 assert_required_models_available	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/cli.py	/^def assert_required_models_available(args):$/;"	f
 attention	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/components/text_encoder.py	/^    def attention(self, query, key, value, mask=None):$/;"	m	class:MultiHeadAttention
 audio	steer_moe/tokenizer/glm4/web_demo.py	/^                audio = gr.Audio(label="Input audio", type='filepath', show_download_button=True/;"	v
-audio_column	steer_moe/utils.py	/^    audio_column: str = "audio_features"$/;"	v	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:str
+audio_column	steer_moe/utils.py	/^    audio_column: str = "input_features"  # Preprocessed audio features$/;"	v	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:str
 audio_decoder	steer_moe/tokenizer/glm4/web_demo.py	/^    audio_decoder: AudioDecoder = None$/;"	v	typeref:typename:AudioDecoder
 audio_files	whisper_train/generate_raw_parquet_multi_processing_word.py	/^    audio_files = []$/;"	v
 audio_token_pattern	steer_moe/tokenizer/glm4/web_demo.py	/^audio_token_pattern = re.compile(r"<\\|audio_(\\d+)\\|>")$/;"	v
@@ -1469,6 +1466,7 @@ librosa_mel_fn	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/audi
 linear_geglu	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^def linear_geglu(x, weight, bias=None):$/;"	f
 list_avaliable_spks	steer_moe/tokenizer/glm4/cosyvoice/cli/cosyvoice.py	/^    def list_avaliable_spks(self):$/;"	m	class:CosyVoice
 ljspeech_example_cacher	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/app.py	/^def ljspeech_example_cacher(text, n_timesteps, mel_temp, length_scale, spk=-1):$/;"	f
+llm_tokenizer	whisper_train/pre_process_word_correct_data.py	/^llm_tokenizer=AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])$/;"	v
 load	steer_moe/tokenizer/glm4/cosyvoice/cli/model.py	/^    def load(self, llm_model, flow_model, hift_model):$/;"	m	class:CosyVoiceModel
 load_audio	steer_moe/tokenizer/whisper_Lv3/whisper.py	/^def load_audio(file: str, sr: int = SAMPLE_RATE):$/;"	f
 load_balancing_loss	steer_moe/utils.py	/^def load_balancing_loss(gating_scores):$/;"	f
@@ -1874,7 +1872,7 @@ test	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/Makefile	/^test: ## Run not
 test-full	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/Makefile	/^test-full: ## Run all tests$/;"	t
 test_aligner_output_and_lb_loss	tests/test_aligner.py	/^def test_aligner_output_and_lb_loss():$/;"	f
 test_audio	steer_moe/models.py	/^    test_audio="\/root\/autodl-nas\/ruitao\/SteerMoE\/tests\/output_audio.wav"$/;"	v
-text_column	steer_moe/utils.py	/^    text_column: str = "input_ids"$/;"	v	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:str
+text_column	steer_moe/utils.py	/^    text_column: str = "labels"  # Preprocessed tokenized labels$/;"	v	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:str
 text_input	steer_moe/tokenizer/glm4/web_demo.py	/^                text_input = gr.Textbox(label="Input text", placeholder="Enter your text here.../;"	v
 text_normalize	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    def text_normalize(self, text, split=True):$/;"	m	class:CosyVoiceFrontEnd
 text_to_sequence	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/__init__.py	/^def text_to_sequence(text, cleaner_names):$/;"	f
