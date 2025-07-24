@@ -8,7 +8,7 @@ import yaml
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments, EarlyStoppingCallback
+from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments, EarlyStoppingCallback, TrainerCallback
 from datasets import Audio, load_dataset, concatenate_datasets, DatasetDict, load_metric, load_from_disk
 import tqdm
 import os
@@ -103,7 +103,7 @@ def prepare_asr_dataset(dataset, audio_column: str, text_column: str,
     return processed
 
 
-class SteeringAnalysisCallback:
+class SteeringAnalysisCallback(TrainerCallback):
     """Callback for analyzing steering patterns during training."""
 
     def __init__(self, model, log_interval: int = 100):
@@ -128,15 +128,19 @@ class SteeringAnalysisCallback:
             print(f"Average steering vector norms per layer: {avg_norms}")
 
 
-class GradientClippingCallback:
+class GradientClippingCallback(TrainerCallback):
     """Callback for gradient clipping on steering vectors."""
 
     def __init__(self, max_norm: float = 1.0):
         self.max_norm = max_norm
 
     def on_step_end(self, args, state, control, **kwargs):
+        # Get model from kwargs
+        model = kwargs.get('model', None)
+        if model is None:
+            return
         # Clip gradients for steering vectors
-        for name, param in self.model.named_parameters():
+        for name, param in model.named_parameters():
             if 'steering_vectors' in name or 'layer_scales' in name:
                 if param.grad is not None:
                     torch.nn.utils.clip_grad_norm_(param, self.max_norm)

@@ -401,22 +401,16 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         if audio_input is None:
             raise ValueError("Either audio_waveform or input_features must be provided")
         
-        # 1. Process audio input - check if it's raw waveform or preprocessed features
-        if audio_input.dim() == 2 and audio_input.size(-1) == 1280:
-            # Already preprocessed Whisper features (batch, seq_len, feature_dim)
-            h_audio = audio_input
-            gating_scores = None
-        elif audio_input.dim() == 3 and audio_input.size(-1) == 1280:
-            # Preprocessed features with batch dimension (batch, seq_len, feature_dim)
-            h_audio = audio_input
-            gating_scores = None
+        # 1. Process audio input - the input from data collator is already preprocessed Whisper features
+        # The preprocessing pipeline already called tokenize_waveform, so we have processed features
+        # We should apply steering to these features, not call tokenize_waveform again
+        if return_gating:
+            # Apply layer-wise steering to the preprocessed features
+            h_audio, gating_scores = self.whisper_encoder._forward_with_steering(audio_input, return_gating=True)
         else:
-            # Raw waveform - process through whisper encoder with steering
-            if return_gating:
-                h_audio, gating_scores = self.whisper_encoder.tokenize_waveform(audio_input, return_gating=True)
-            else:
-                h_audio = self.whisper_encoder.tokenize_waveform(audio_input)
-                gating_scores = None
+            # Apply layer-wise steering to the preprocessed features  
+            h_audio = self.whisper_encoder._forward_with_steering(audio_input, return_gating=False)
+            gating_scores = None
         
         # h_audio: (batch, audio_seq_len, feature_dim)
 

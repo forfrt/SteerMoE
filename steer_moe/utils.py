@@ -107,7 +107,7 @@ class DataCollatorSpeechSeqSeqWithPadding:
     max_length: int = 512
     audio_column: str = "input_features"  # Preprocessed audio features
     text_column: str = "labels"  # Preprocessed tokenized labels
-    return_attention_mask: bool = True
+    return_attention_mask: bool = False
     
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         """

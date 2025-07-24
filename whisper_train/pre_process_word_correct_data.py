@@ -39,12 +39,15 @@ def download_from_cos(path,tag='train'):
 
 processed_data = []
 
-# # 构建特征
-feature_extractor = WhisperFeatureExtractor.from_pretrained(model_path["whisper_large-v2"])
-tokenizer = WhisperTokenizer.from_pretrained(pretrained_model_name_or_path=model_path["whisper_large-v2"],
-                                             language="chinese", task="transcribe")
-llm_tokenizer=AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])
-data_pipe = HFDataProcessorPipeline(feature_extractor=feature_extractor, tokenizer=tokenizer)
+# # 构建特征 - Use WhisperEncoder for proper audio feature extraction
+from steer_moe.tokenizer.whisper_Lv3.whisper import WhisperEncoder
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+# Load WhisperEncoder for audio feature extraction
+whisper_encoder = WhisperEncoder(model_path["whisper_large-v2"])
+llm_tokenizer=AutoTokenizer.from_pretrained("/root/autodl-tmp/model/Qwen2.5-7B-Ins-1M/")
 # dataset = load_dataset("parquet", data_files="/root/autodl-tmp/wys/whisper/tts_test/train_terms_20231224.parquet", split='train', cache_dir='.cache')
 # dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
 # dataset = dataset.map(data_pipe.prepare_dataset, remove_columns=dataset.column_names)
@@ -82,15 +85,19 @@ def prepare_dataset(batch, audio_column, text_column, whisper_processor, tokeniz
     if waveform.ndim > 1:
         waveform = waveform.mean(dim=-1)  # convert to mono
     waveform = waveform.unsqueeze(0)  # (1, T)
-    # Extract audio features
-    audio_features = whisper_processor.tokenize_waveform(waveform)
+    # Extract audio features using WhisperEncoder (this gives us the full 1280-dim features)
+    # waveform shape: (1, T) - already in correct format for whisper_encoder
+    with torch.no_grad():  # Don't need gradients during preprocessing
+        audio_features = whisper_processor.tokenize_waveform(waveform)
+    input_features = audio_features.squeeze(0)  # Remove batch dimension: (seq_len, 1280)
+    
     # Tokenize text
     text = batch[text_column]
     text_tokens = tokenizer(text, return_tensors='pt', padding='max_length', truncation=True)
     
     return {
-        'audio_features': audio_features.squeeze(0),  # Remove batch dimension
-        'input_ids': text_tokens['input_ids'].squeeze(0),
+        'input_features': input_features,  # Use 'input_features' to match training pipeline
+        'labels': text_tokens['input_ids'].squeeze(0),  # Use 'labels' to match training pipeline  
         'attention_mask': text_tokens['attention_mask'].squeeze(0),
         'text': text
     }
@@ -163,7 +170,8 @@ if __name__ == '__main__':
 
 
         def _prepare(batch):
-            return prepare_dataset(batch, 'audio', 'text', tokenizer, llm_tokenizer, 'sample_rate')
+            # Use whisper_encoder for proper audio feature extraction
+            return prepare_dataset(batch, 'audio', 'text', whisper_encoder, llm_tokenizer, 16000)
 
         try:
             tmp_dataset = tmp_dataset.map(_prepare, remove_columns=tmp_dataset.column_names)

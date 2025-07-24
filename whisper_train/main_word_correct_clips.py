@@ -1,10 +1,4 @@
-"""
- * author Ruitao Feng
- * created on 10-07-2025
- * github: https://github.com/forfrt
-"""
-
-# codingse :utf8
+# coding:utf8
 import os
 os.environ['NCCL_P2P_DISABLE'] = '1'
 os.environ['NCCL_IB_DISABLE'] = '1'

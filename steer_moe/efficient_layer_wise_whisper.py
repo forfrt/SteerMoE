@@ -146,21 +146,21 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         but applies steering during the encoding process.
         
         Args:
-            audio: Audio waveform tensor
+            audio: Audio waveform tensor or preprocessed features
             return_gating: Whether to return gating scores for analysis
             
         Returns:
             Steered audio features, optionally with gating scores
         """
-        # Use the original encoder's tokenize_waveform method to get mel spectrogram
-        # and then apply our layer-wise steering during encoding
-        
-        # First, get the mel spectrogram using the original encoder's preprocessing
-        with torch.no_grad():
+        # In the training pipeline, input is always preprocessed features
+        # For raw waveform processing (inference), we keep the original logic
+        if (audio.dim() == 3 and audio.size(-1) == 1280) or (audio.dim() == 2 and audio.size(-1) == 1280):
+            # Input is already preprocessed Whisper features - apply steering directly
+            mel_features = audio
+        else:
+            # Raw waveform - process through original encoder first
             if hasattr(self.original_encoder, 'tokenize_waveform'):
-                # Use original tokenize_waveform to get properly formatted features
                 mel_features = self.original_encoder.tokenize_waveform(audio)
-                # mel_features shape: (batch, seq_len, feature_dim)
             else:
                 # Fallback: assume audio is already processed mel spectrogram
                 mel_features = audio
