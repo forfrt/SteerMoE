@@ -19,9 +19,8 @@ from .layer_wise_whisper import LayerWiseSteeringWhisperEncoder
 from .efficient_layer_wise_whisper import EfficientLayerWiseSteeringWhisperEncoder
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
-
+    level=logging.DEBUG,
+    format='%(asctime)s %(process)d - %(levelname)s - %(filename)s>%(funcName)s>%(lineno)d - %(message)s')
 # TODO: Import or load LLM decoder (e.g., from transformers)
 
 # Audio → Encoder → MoE_Steering → LLM → Output
@@ -344,16 +343,19 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
     This approach uses one router to assign weights to steering vectors for all layers,
     making it much more parameter-efficient than the multiple router approach.
     """
-    def __init__(self, whisper_encoder_path, llm_decoder, num_experts=8, 
+    def __init__(self, whisper_encoder, llm_decoder, num_experts=8, 
                  prompt_proj=None, max_prompt_tokens=None, use_adapter=True):
         super().__init__()
         
         # Create efficient layer-wise steering Whisper encoder
-        self.whisper_encoder = EfficientLayerWiseSteeringWhisperEncoder(
-            whisper_encoder_path, num_experts=num_experts
-        )
         
+        # self.whisper_encoder = EfficientLayerWiseSteeringWhisperEncoder(
+        #     whisper_encoder_path, num_experts=num_experts
+        # )
+
+        self.whisper_encoder=whisper_encoder
         self.llm_decoder = llm_decoder          # frozen
+        logging.debug(f"llm_decoder: {self.llm_decoder}")
         self.use_adapter = use_adapter
         self.max_prompt_tokens = max_prompt_tokens
 
@@ -371,6 +373,9 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
                                           getattr(llm_decoder.config, 'hidden_size', encoder_output_dim))
             else:
                 decoder_input_dim = encoder_output_dim
+
+
+            logging.info(f"decoder_input_dim: {decoder_input_dim}, encoder_output_dim: {encoder_output_dim}")
             
             if encoder_output_dim != decoder_input_dim:
                 self.prompt_proj = nn.Linear(encoder_output_dim, decoder_input_dim)
@@ -407,10 +412,13 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         if return_gating:
             # Apply layer-wise steering to the preprocessed features
             h_audio, gating_scores = self.whisper_encoder._forward_with_steering(audio_input, return_gating=True)
+            logging.debug(f"gating_scores: {gating_scores.shape}, {gating_scores.dtype}, {gating_scores}")
         else:
             # Apply layer-wise steering to the preprocessed features  
             h_audio = self.whisper_encoder._forward_with_steering(audio_input, return_gating=False)
             gating_scores = None
+
+        logging.debug(f"h_audio: {h_audio.shape}, {h_audio.dtype}, {h_audio}")
         
         # h_audio: (batch, audio_seq_len, feature_dim)
 
@@ -424,6 +432,8 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         # 3. Limit prompt length if specified
         if self.max_prompt_tokens is not None:
             audio_prompts = audio_prompts[:, :self.max_prompt_tokens, :]
+            
+        logging.debug(f"h_audio: {h_audio.shape}, {h_audio.dtype}, {h_audio}")
 
         # 4. Handle pure audio generation case
         if decoder_input_ids is None:
@@ -452,12 +462,18 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         else:
             raise ValueError("Could not find embedding method for decoder. Please adapt for your LLM.")
 
+
+        logging.debug(f"text_embeds: {text_embeds.shape}, {text_embeds.dtype}, {text_embeds}")
         # 6. Concatenate audio prompts with text embeddings
-        # Format: [audio_prompts, text_embeds]
+        # inputs_embeds: Format: [audio_prompts, text_embeds] = [audio_prompts, text_prompts, labels]
         inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)
         # inputs_embeds: (batch, audio_seq_len + text_seq_len, decoder_dim)
+        logging.debug(f"inputs_embeds: {inputs_embeds.shape}, {inputs_embeds.dtype}, {inputs_embeds}")
+
+        logging.debug(f"labels: {labels.shape}, {labels.dtype}, {labels}")
 
         # 7. Handle labels for training
+        # labels: Format:  [len(audio_prompts)*-100, len(text_prompts)*-100, labels]
         if labels is not None:
             audio_prompt_len = audio_prompts.size(1)
             
@@ -495,7 +511,7 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         else:
             # No labels - inference mode
             output = self.llm_decoder(
-                inputs_embeds=inputs_embeds
+                inputs_ids=inputs_embeds
             )
 
         # 8. Return output with gating scores if requested
@@ -607,5 +623,38 @@ if __name__ == "__main__":
     output=steer_moe_model(input_features)
     logging.info(f"output shape: {output.shape}")
 
+
+def casual_train():
+    import torch
+    from transformers import AutoTokenizer, Qwen2ForCausalLM, AdamW
+    
+    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-7B-instruct")
+    model     = Qwen2ForCausalLM.from_pretrained("Qwen/Qwen2-7B-instruct")
+    
+    prompt = "Q: What is the circumference of a circle with radius 3?\nA: "
+    target = " 18.85"  # (approximately)
+    
+    # 1) Tokenize full "prompt + target"
+    tok = tokenizer(prompt + target, return_tensors="pt", truncation=True, padding="longest")
+    input_ids      = tok["input_ids"]         # shape: (batch, seq_len)
+    attention_mask = tok["attention_mask"]
+    batch_size, seq_len = input_ids.shape
+    
+    # 2) Build labels masking out prompt
+    labels = input_ids.clone()
+    prompt_len = tokenizer(prompt, add_special_tokens=False)["input_ids"].__len__()
+    labels[:, :prompt_len] = -100
+    
+    # 3) Convert to embeddings using the model’s own embedding layer
+    #    This creates a tensor shaped (batch, seq_len, hidden_size)
+    inputs_embeds = model.get_input_embeddings()(input_ids)
+    
+    # 4) Forward pass using inputs_embeds
+    outputs = model(
+        inputs_embeds=inputs_embeds,
+        attention_mask=attention_mask,
+        labels=labels
+    )
+    loss = outputs.loss
 
     

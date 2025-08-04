@@ -7,7 +7,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import logging
 from typing import List, Optional, Tuple
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(process)d - %(levelname)s - %(filename)s>%(funcName)s>%(lineno)d - %(message)s')
 
 def _get_num_layers(encoder):
     # Recursively find the underlying WhisperEncoder and return the number of layers
@@ -40,11 +45,12 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         self.original_encoder = original_whisper_encoder
         self.num_experts = num_experts
         self.steering_scale = steering_scale
-        print(f"original_whisper_encoder: {original_whisper_encoder}")
-        print(f"Has speech_encoder attribute: {hasattr(original_whisper_encoder, 'speech_encoder')}")
-        print(f"Has _modules attribute: {hasattr(original_whisper_encoder, '_modules')}")
+        logging.debug(f"original_whisper_encoder: {original_whisper_encoder}")
+        logging.debug(f"self.original_encoder: {self.original_encoder}")
+        logging.debug(f"Has speech_encoder attribute: {hasattr(original_whisper_encoder, 'speech_encoder')}")
+        logging.debug(f"Has _modules attribute: {hasattr(original_whisper_encoder, '_modules')}")
         if hasattr(original_whisper_encoder, '_modules'):
-            print(f"Available modules: {list(original_whisper_encoder._modules.keys())}")
+            logging.debug(f"Available modules: {list(original_whisper_encoder._modules.keys())}")
         
         # Get the number of layers from the speech encoder
         self.num_layers = _get_num_layers(original_whisper_encoder)
@@ -124,16 +130,22 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             
             # Update x for next layer
             x = steered_output
+
+        logging.debug(f"x: {x.shape}, {x.dtype}, {x}")
         
         # Apply final layer norm if exists
         if hasattr(self.original_encoder, 'speech_encoder') and hasattr(self.original_encoder.speech_encoder, 'layer_norm'):
             final_output = self.original_encoder.speech_encoder.layer_norm(x)
+            logging.debug(f"speech_encoder final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
         elif hasattr(self.original_encoder, '_modules') and 'speech_encoder' in self.original_encoder._modules and hasattr(self.original_encoder._modules['speech_encoder'], 'layer_norm'):
             final_output = self.original_encoder._modules['speech_encoder'].layer_norm(x)
+            logging.debug(f"_modules final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
         elif hasattr(self.original_encoder, 'layer_norm'):
             final_output = self.original_encoder.layer_norm(x)
+            logging.debug(f"layer_norm final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
         else:
             final_output = x
+            logging.debug(f"x final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
             
         if return_gating:
             return final_output, gating_scores_list
@@ -187,6 +199,7 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         Returns:
             Steered features with optional gating scores
         """
+        logging.info(f"original_encoder: {self.original_encoder}")
         # Get the speech encoder
         if hasattr(self.original_encoder, 'speech_encoder'):
             speech_encoder = self.original_encoder.speech_encoder
@@ -195,20 +208,35 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             
         # Apply initial processing (conv layers, positional embedding, etc.)
         x = mel_features
+        logging.debug(f"original x: {x.shape}, {x.dtype}, {x}")
+
+        # x=self.original_encoder._mask_input_features
         
         # If the speech encoder has conv layers and embeddings, apply them first
         if hasattr(speech_encoder, 'conv1'):
-            x = torch.nn.functional.gelu(speech_encoder.conv1(x.transpose(1, 2)))
+            # x = torch.nn.functional.gelu(speech_encoder.conv1(x.transpose(1, 2)))
+            x = torch.nn.functional.gelu(speech_encoder.conv1(x))
             x = torch.nn.functional.gelu(speech_encoder.conv2(x))
-            x = x.transpose(1, 2)
+            # x = x.transpose(1, 2)
+            x=x.permute(0, 2, 1)
+        else:
+            logging.error(f"no conv1 layer found")
+
+        logging.debug(f"conv1+conv2 x: {x.shape}, {x.dtype}, {x}")
             
         if hasattr(speech_encoder, 'embed_positions'):
             positions = speech_encoder.embed_positions.weight[:x.size(1)]
             x = (x + positions) * speech_encoder.embed_scale
+        else:
+            logging.error(f"no embed_positions layer found")
+
+        logging.debug(f"embed_positions x: {x.shape}, {x.dtype}, {x}")
             
         # Apply dropout if present
         if hasattr(speech_encoder, 'dropout'):
             x = speech_encoder.dropout(x)
+        else:
+            logging.error(f"no dropout layer found")
         
         # Now process through layers with steering
         gating_scores_list = []
@@ -217,6 +245,7 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         if hasattr(speech_encoder, 'layers'):
             encoder_layers = speech_encoder.layers
         else:
+            logging.error(f"no attention layers found")
             encoder_layers = []
             
         for layer_idx, layer in enumerate(encoder_layers):
@@ -251,10 +280,16 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             
             # Store gating scores for analysis
             gating_scores_list.append(gating_scores)
+
+        logging.debug(f"layers x: {x.shape}, {x.dtype}, {x}")
         
         # Apply final layer norm if exists
         if hasattr(speech_encoder, 'layer_norm'):
             x = speech_encoder.layer_norm(x)
+        else:
+            logging.error(f"no layer_norm layers found")
+
+        logging.debug(f"layer_norm x: {x.shape}, {x.dtype}, {x}")
             
         if return_gating:
             return x, gating_scores_list

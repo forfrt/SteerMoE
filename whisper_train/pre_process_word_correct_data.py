@@ -4,8 +4,6 @@
  * github: https://github.com/forfrt
 """
 
-from utils import CosFileServer
-import setting
 import os
 import pandas as pd
 import tqdm
@@ -13,7 +11,6 @@ import tqdm
 from datasets import load_dataset
 from datasets import DatasetDict, load_from_disk
 from datasets import Audio
-from data_process import HFDataProcessorPipeline
 from datasets import load_from_disk
 
 import logging
@@ -24,29 +21,18 @@ logging.basicConfig(
 
 # Init feature extractor and tokenizer
 from transformers import WhisperFeatureExtractor, WhisperTokenizer, AutoTokenizer
-from setting import model_path, tokenizer_path
-def download_from_cos(path,tag='train'):
-    audio_path = path
-    # 将audio_path的最后一个点替换为下划线，然后添加后缀_train.parquet
-    base, extension = audio_path.rsplit('.', 1)
-    parquet_path = f"{base}_{extension}_{tag}.parquet"
-    cos = CosFileServer(setting.COS_BUCKET, setting.COS_SECRET_ID, setting.COS_SECRET_KEY)
-    file_is_exits = cos.exists_object(parquet_path)
-    if not file_is_exits:
-        return False
-    cos.download_object(parquet_path, os.path.join(f'./tmp_scripts/tmp_data_{tag}',parquet_path.split('/')[-1]))
-    return True
 
 processed_data = []
 
 # # 构建特征 - Use WhisperEncoder for proper audio feature extraction
-from steer_moe.tokenizer.whisper_Lv3.whisper import WhisperEncoder
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from steer_moe.tokenizer.whisper_Lv3.whisper import WhisperEncoder
 
 # Load WhisperEncoder for audio feature extraction
-whisper_encoder = WhisperEncoder(model_path["whisper_large-v2"])
+whisper_feature_extractor = WhisperFeatureExtractor.from_pretrained("/root/autodl-tmp/model/whisper-large-v3")
+# whisper_encoder = WhisperEncoder("/root/autodl-tmp/model/whisper-large-v3")
 llm_tokenizer=AutoTokenizer.from_pretrained("/root/autodl-tmp/model/Qwen2.5-7B-Ins-1M/")
 # dataset = load_dataset("parquet", data_files="/root/autodl-tmp/wys/whisper/tts_test/train_terms_20231224.parquet", split='train', cache_dir='.cache')
 # dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
@@ -54,7 +40,7 @@ llm_tokenizer=AutoTokenizer.from_pretrained("/root/autodl-tmp/model/Qwen2.5-7B-I
 # dataset.save_to_disk("/root/autodl-tmp/wys/whisper/tts_test/train_terms_20231224_processed")
 # exit()
 
-def prepare_dataset(batch, audio_column, text_column, whisper_processor, tokenizer, sample_rate=16000):
+def prepare_dataset(batch, audio_column, text_column, feature_extractor, tokenizer, sample_rate=16000):
     """
     Map function to process a batch: loads audio, extracts features, tokenizes text.
     Args:
@@ -69,36 +55,28 @@ def prepare_dataset(batch, audio_column, text_column, whisper_processor, tokeniz
     """
     # Load audio
     audio_path = batch[audio_column]
-    # If using datasets.Audio, batch[audio_column] may be a dict with 'array' and 'sampling_rate'
-    if isinstance(audio_path, dict) and 'array' in audio_path:
-        waveform = torch.tensor(audio_path['array'], dtype=torch.float32)
-        if audio_path['sampling_rate'] != sample_rate:
-            import torchaudio
-            waveform = torchaudio.functional.resample(waveform, audio_path['sampling_rate'], sample_rate)
-    else:
-        import soundfile as sf
-        waveform, sr = sf.read(audio_path)
-        waveform = torch.tensor(waveform, dtype=torch.float32)
-        if sr != sample_rate:
-            import torchaudio
-            waveform = torchaudio.functional.resample(waveform, sr, sample_rate)
-    if waveform.ndim > 1:
-        waveform = waveform.mean(dim=-1)  # convert to mono
-    waveform = waveform.unsqueeze(0)  # (1, T)
-    # Extract audio features using WhisperEncoder (this gives us the full 1280-dim features)
-    # waveform shape: (1, T) - already in correct format for whisper_encoder
-    with torch.no_grad():  # Don't need gradients during preprocessing
-        audio_features = whisper_processor.tokenize_waveform(waveform)
-    input_features = audio_features.squeeze(0)  # Remove batch dimension: (seq_len, 1280)
+
+    # compute log-Mel input features from input audio array
+    # (128, 3000), float32 for a 30s audio
+    input_features = feature_extractor(audio_path["array"], sampling_rate=audio_path["sampling_rate"]).input_features[0]
+    input_length=len(audio_path['array'])/audio_path['sampling_rate']
     
     # Tokenize text
     text = batch[text_column]
-    text_tokens = tokenizer(text, return_tensors='pt', padding='max_length', truncation=True)
+    # could also pad here, but the input batch contains only 1 data, so pointless
+    # text_tokens = tokenizer(text, return_tensors='pt', padding='longest', truncation=True)
+    text_tokens = tokenizer(text)
+
+    logging.info(f"input_features: {input_features.shape}, dtype: {input_features.dtype}")
+    logging.info(f"text: {text}, input_ids: {len(text_tokens['input_ids'])}")
+    logging.info(f"attention_mask: {len(text_tokens['attention_mask'])}")
     
     return {
         'input_features': input_features,  # Use 'input_features' to match training pipeline
-        'labels': text_tokens['input_ids'].squeeze(0),  # Use 'labels' to match training pipeline  
-        'attention_mask': text_tokens['attention_mask'].squeeze(0),
+        'labels': text_tokens['input_ids'],  # Use 'labels' to match training pipeline  
+
+        'input_length': input_length,
+        'attention_mask': text_tokens['attention_mask'],
         'text': text
     }
 
@@ -171,7 +149,7 @@ if __name__ == '__main__':
 
         def _prepare(batch):
             # Use whisper_encoder for proper audio feature extraction
-            return prepare_dataset(batch, 'audio', 'text', whisper_encoder, llm_tokenizer, 16000)
+            return prepare_dataset(batch, 'audio', 'sentence', whisper_feature_extractor, llm_tokenizer, 16000)
 
         try:
             tmp_dataset = tmp_dataset.map(_prepare, remove_columns=tmp_dataset.column_names)
@@ -193,22 +171,3 @@ if __name__ == '__main__':
         tmp_batch_df.to_csv(f"{processed_status_dir}processed_batch_{batch_tag}_{i}.csv", index=False)
 
     logging.error(error_batchs)
-
-    # 删除.cache/parquet文件夹
-    import shutil
-
-    try:
-        if os.path.exists('.cache/parquet'):
-            # 删除文件夹及其内容
-            shutil.rmtree('.cache/parquet')
-    except Exception as e:
-        logging.error(f"eeeeeeeeeeeeeeeeeeee: {e}")
-    # 标记完成
-    with open(f"../status_folder/feature_extraction_{batch_tag}.done", "w") as f:
-        f.write("done")
-# dataset = dataset.map(data_pipe.prepare_dataset, remove_columns=dataset.column_names["train"], num_proc=20)
-# # print(common_voice)
-# # print(common_voice["input_features"][0])
-#
-# # save data to disk
-# dataset.save_to_disk("./tmp_scripts/aopeng_999")

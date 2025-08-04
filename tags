@@ -170,6 +170,9 @@ DataCollatorSpeechSeqSeqWithPaddingLegacy	steer_moe/utils.py	/^class DataCollato
 DataList	steer_moe/tokenizer/glm4/cosyvoice/dataset/dataset.py	/^class DataList(IterableDataset):$/;"	c
 Dataset	steer_moe/tokenizer/glm4/cosyvoice/dataset/dataset.py	/^def Dataset(data_list_file,$/;"	f
 Dataset Loading	README.md	/^## Dataset Loading$/;"	s	chapter:SteerMoE
+DatasetCommonVoiceCN	whisper_train/data_process.py	/^class DatasetCommonVoiceCN(DatasetCommonVoiceHindi):$/;"	c
+DatasetCommonVoiceHindi	whisper_train/data_process.py	/^class DatasetCommonVoiceHindi(object):$/;"	c
+DatasetFinAudioCN	whisper_train/data_process.py	/^class DatasetFinAudioCN(DatasetCommonVoiceHindi):$/;"	c
 Decoder	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/components/decoder.py	/^class Decoder(nn.Module):$/;"	c
 DecoderLayer	steer_moe/tokenizer/glm4/cosyvoice/transformer/decoder_layer.py	/^class DecoderLayer(nn.Module):$/;"	c
 Denoiser	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/denoiser.py	/^class Denoiser(torch.nn.Module):$/;"	c
@@ -249,7 +252,8 @@ GPT_SPK_EMBEDDING	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^    
 GPT_SPK_EMBEDDING	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^    GPT_SPK_EMBEDDING=torch.zeros(1,192)$/;"	v
 Generator	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/models.py	/^class Generator(torch.nn.Module):$/;"	c
 Glm4Tokenizer	steer_moe/tokenizer/glm4_tokenizer.py	/^class Glm4Tokenizer(nn.Module):$/;"	c
-GradientClippingCallback	scripts/train_layer_wise.py	/^class GradientClippingCallback:$/;"	c
+GradientClippingCallback	scripts/train_layer_wise.py	/^class GradientClippingCallback(TrainerCallback):$/;"	c
+HFDataProcessorPipeline	whisper_train/data_process.py	/^class HFDataProcessorPipeline(object):$/;"	c
 HOP_LENGTH	steer_moe/tokenizer/whisper_Lv3/whisper.py	/^HOP_LENGTH = 160$/;"	v
 HiFTGenerator	steer_moe/tokenizer/glm4/cosyvoice/hifigan/generator.py	/^class HiFTGenerator(nn.Module):$/;"	c
 HiFi-GAN: Generative Adversarial Networks for Efficient and High Fidelity Speech Synthesis	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/README.md	/^# HiFi-GAN: Generative Adversarial Networks for Efficient and High Fidelity Speech Synthesis$/;"	c
@@ -416,7 +420,7 @@ SteerMoEHybridModel	steer_moe/models.py	/^class SteerMoEHybridModel(nn.Module):$
 SteerMoELayerWiseModel	steer_moe/models.py	/^class SteerMoELayerWiseModel(nn.Module):$/;"	c
 SteerMoEModel	steer_moe/models.py	/^class SteerMoEModel(nn.Module):$/;"	c
 Steering Analysis	steer_moe/implementation_summary.md	/^### Steering Analysis$/;"	S	section:SteerMoE Current Implementation Summary""Monitoring and Analysis
-SteeringAnalysisCallback	scripts/train_layer_wise.py	/^class SteeringAnalysisCallback:$/;"	c
+SteeringAnalysisCallback	scripts/train_layer_wise.py	/^class SteeringAnalysisCallback(TrainerCallback):$/;"	c
 Swish	steer_moe/tokenizer/glm4/cosyvoice/transformer/activation.py	/^class Swish(torch.nn.Module):$/;"	c
 T	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^T = TypeVar("T")$/;"	v
 TRAINER_STATE_NAME	whisper_train/main_word_correct_clips.py	/^TRAINER_STATE_NAME = "trainer_state.json"$/;"	v
@@ -494,7 +498,6 @@ WhisperEncoderWithSteering	steer_moe/layer_wise_aligner.py	/^class WhisperEncode
 WhisperFlashAttention2	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^class WhisperFlashAttention2(WhisperAttention):$/;"	c
 WhisperForAudioClassification	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^class WhisperForAudioClassification(WhisperPreTrainedModel):$/;"	c
 WhisperForCausalLM	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^class WhisperForCausalLM(WhisperPreTrainedModel):$/;"	c
-WhisperForConditionalGeneration	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^class WhisperForConditionalGeneration(WhisperGenerationMixin, WhisperPreTrainedModel):$/;"	c
 WhisperGenerationMixin	steer_moe/tokenizer/glm4/speech_tokenizer/generation_whisper.py	/^class WhisperGenerationMixin:$/;"	c
 WhisperModel	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^class WhisperModel(WhisperPreTrainedModel):$/;"	c
 WhisperPositionalEmbedding	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^class WhisperPositionalEmbedding(nn.Embedding):$/;"	c
@@ -735,9 +738,10 @@ __init__	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def __init__(
 __init__	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def __init__(self, config: WhisperConfig):$/;"	m	class:WhisperDecoderLayer
 __init__	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def __init__(self, config: WhisperConfig):$/;"	m	class:WhisperEncoder
 __init__	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def __init__(self, config: WhisperConfig):$/;"	m	class:WhisperEncoderLayer
-__init__	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def __init__(self, config: WhisperConfig):$/;"	m	class:WhisperForConditionalGeneration
 __init__	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def __init__(self, config: WhisperConfig):$/;"	m	class:WhisperModel
 __init__	steer_moe/tokenizer/whisper_Lv3/whisper.py	/^    def __init__($/;"	m	class:WhisperEncoder
+__init__	whisper_train/data_process.py	/^    def __init__(self):$/;"	m	class:DatasetCommonVoiceHindi
+__init__	whisper_train/data_process.py	/^    def __init__(self, feature_extractor, tokenizer):$/;"	m	class:HFDataProcessorPipeline
 __init__	whisper_train/main_word_correct_clips.py	/^    def __init__($/;"	m	class:Logged_Seq2SeqTrainer
 __init__	whisper_train/main_word_correct_clips.py	/^    def __init__(self, dataset_paths, batch_size, total_size):$/;"	m	class:CustomDatasetIterator
 __init__	whisper_train/modules.py	/^    def __init__(self, tokenizer):$/;"	m	class:ASREvaluator
@@ -879,7 +883,6 @@ _supports_static_cache	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whispe
 _symbol_to_id	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/__init__.py	/^_symbol_to_id = {s: i for i, s in enumerate(symbols)}$/;"	v
 _tied_weights_keys	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    _tied_weights_keys = ["proj_out.weight"]$/;"	v	class:WhisperForCausalLM
 _tied_weights_keys	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    _tied_weights_keys = ["proj_out.weight"]$/;"	v	class:WhisperVQForConditionalGeneration
-_tied_weights_keys	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    _tied_weights_keys = ["proj_out.weight"]$/;"	v	class:WhisperForConditionalGeneration
 _to_wav_bytes	steer_moe/tokenizer/glm4/audio_process.py	/^    def _to_wav_bytes(self, audio_data):$/;"	m	class:AudioStreamProcessor
 _update_causal_mask	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def _update_causal_mask($/;"	m	class:WhisperVQDecoder
 _whitespace_re	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/cleaners.py	/^_whitespace_re = re.compile(r"\\s+")$/;"	v
@@ -922,7 +925,6 @@ b	whisper_train/modules.py	/^    b = " ".join(list(b))$/;"	v
 b	whisper_train/modules.py	/^    b = "失业率降到十七年来的新低点"$/;"	v
 base_model_prefix	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    base_model_prefix = "model"$/;"	v	class:WhisperPreTrainedModel
 base_model_prefix	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    base_model_prefix = "model"$/;"	v	class:WhisperVQForConditionalGeneration
-base_model_prefix	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    base_model_prefix = "model"$/;"	v	class:WhisperForConditionalGeneration
 base_model_prefix	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    base_model_prefix = "model"$/;"	v	class:WhisperPreTrainedModel
 basic_cleaners	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/cleaners.py	/^def basic_cleaners(text):$/;"	f
 batch	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^def batch(data, batch_type='static', batch_size=16, max_frames_in_batch=12000, mode='train'):$/;"	f
@@ -959,6 +961,8 @@ clear_fn	steer_moe/tokenizer/glm4/web_demo.py	/^    def clear_fn():$/;"	f
 cli	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/cli.py	/^def cli():$/;"	f
 closest_power_2	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^def closest_power_2(x: float) -> int:$/;"	f	typeref:typename:int
 collapse_whitespace	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/cleaners.py	/^def collapse_whitespace(text):$/;"	f
+common_voice_cn_process	whisper_train/data_process.py	/^def common_voice_cn_process():$/;"	f
+common_voice_hi_process	whisper_train/data_process.py	/^def common_voice_hi_process():$/;"	f
 compare_cross_modal_approaches	cross_modal_steer/cross_modal_steering.py	/^def compare_cross_modal_approaches():$/;"	f
 compare_implementations	steer_moe/layer_wise_aligner.py	/^def compare_implementations():$/;"	f
 compare_router_approaches	steer_moe/efficient_layer_wise_whisper.py	/^def compare_router_approaches():$/;"	f
@@ -1013,7 +1017,10 @@ custom_forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^           
 cv	steer_moe/tokenizer/glm4/cosyvoice/utils/executor.py	/^    def cv(self, model, cv_data_loader, writer, info_dict, on_batch_end=True):$/;"	m	class:Executor
 cwd	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/setup.py	/^cwd = os.path.dirname(os.path.abspath(__file__))$/;"	v
 data	whisper_train/generate_raw_parquet_multi_processing_word.py	/^                data = json.load(f)$/;"	v
-data_pipe	whisper_train/pre_process_word_correct_data.py	/^data_pipe = HFDataProcessorPipeline(feature_extractor=feature_extractor, tokenizer=tokenizer)$/;"	v
+data_path	whisper_train/data_process.py	/^    data_path = ".\/data\/common_voice_11_0_hindi_processed"$/;"	v	class:DatasetCommonVoiceHindi
+data_path	whisper_train/data_process.py	/^    data_path = ".\/data\/common_voice_zh_CN\/dataset_processed"$/;"	v	class:DatasetCommonVoiceCN
+data_path	whisper_train/data_process.py	/^    data_path = ".\/data\/common_voice_zh_CN\/dataset_processed"$/;"	v	class:DatasetFinAudioCN
+dataset	whisper_train/data_process.py	/^    dataset = DatasetDict()$/;"	v
 decode	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^    def decode(self, stft_a: Tensor, stft_b: Tensor) -> Tensor:$/;"	m	class:STFT	typeref:typename:Tensor
 decode1d	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^    def decode1d(self, stft_pair: Tensor) -> Tensor:$/;"	m	class:STFT	typeref:typename:Tensor
 default	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^def default(val: Optional[T], d: Union[Callable[..., T], T]) -> T:$/;"	f	typeref:typename:T
@@ -1098,7 +1105,6 @@ fa3_func	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^        flash_att
 fa3_varlen_func	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^        flash_attn_varlen_func as fa3_varlen_func,$/;"	x	nameref:unknown:flash_attn_varlen_func
 fade_in_out	steer_moe/tokenizer/glm4/flow_inference.py	/^def fade_in_out(fade_in_mel, fade_out_mel, window):$/;"	f
 feature_extractor	steer_moe/tokenizer/glm4/web_demo.py	/^    whisper_model, feature_extractor = None, None$/;"	v
-feature_extractor	whisper_train/pre_process_word_correct_data.py	/^feature_extractor = WhisperFeatureExtractor.from_pretrained(model_path["whisper_large-v2"])$/;"	v
 feature_loss	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/models.py	/^def feature_loss(fmap_r, fmap_g):$/;"	f
 file_id	whisper_train/generate_raw_parquet_multi_processing_word.py	/^        file_id = Path(audio_file).stem$/;"	v
 filter	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^def filter(data,$/;"	f
@@ -1290,7 +1296,6 @@ forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def forward($/
 forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def forward($/;"	m	class:WhisperDecoderLayer	typeref:typename:torch.Tensor
 forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def forward($/;"	m	class:WhisperEncoder
 forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def forward($/;"	m	class:WhisperEncoderLayer	typeref:typename:torch.Tensor
-forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def forward($/;"	m	class:WhisperForConditionalGeneration	typeref:typename:Union[tuple[torch.Tensor],Seq2SeqLMOutput]
 forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def forward($/;"	m	class:WhisperModel	typeref:typename:Union[Tuple[torch.Tensor],Seq2SeqModelOutput]
 forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def forward(self, input_ids, past_key_values_length=0):$/;"	m	class:WhisperPositionalEmbedding
 forward	tmpx07ntkc2/_remote_module_non_scriptable.py	/^def forward(self, *args, **kwargs):$/;"	f
@@ -1315,7 +1320,6 @@ fp16	configs/stage3_wo_offload.json	/^  "fp16": {$/;"	o
 freeze_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def freeze_encoder(self):$/;"	m	class:WhisperForAudioClassification
 freeze_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def freeze_encoder(self):$/;"	m	class:WhisperVQForConditionalGeneration
 freeze_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def freeze_encoder(self):$/;"	m	class:WhisperVQModel
-freeze_encoder	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def freeze_encoder(self):$/;"	m	class:WhisperForConditionalGeneration
 freeze_encoder	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def freeze_encoder(self):$/;"	m	class:WhisperModel
 frontend_cross_lingual	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    def frontend_cross_lingual(self, tts_text, prompt_speech_16k):$/;"	m	class:CosyVoiceFrontEnd
 frontend_instruct	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    def frontend_instruct(self, tts_text, spk_id, instruct_text):$/;"	m	class:CosyVoiceFrontEnd
@@ -1344,7 +1348,6 @@ get_dataset_filelist	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifi
 get_decoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_decoder(self):$/;"	m	class:WhisperForCausalLM
 get_decoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_decoder(self):$/;"	m	class:WhisperVQForConditionalGeneration
 get_decoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_decoder(self):$/;"	m	class:WhisperVQModel
-get_decoder	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_decoder(self):$/;"	m	class:WhisperForConditionalGeneration
 get_decoder	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_decoder(self):$/;"	m	class:WhisperModel
 get_device	steer_moe/al_models.py	/^    def get_device(self):$/;"	m	class:AudioToText
 get_device	steer_moe/models.py	/^    def get_device(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
@@ -1354,7 +1357,6 @@ get_device	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/cli.py	/^def g
 get_empty_segmentation	whisper_train/generate_raw_parquet_multi_processing_word.py	/^def get_empty_segmentation(duration, music_li, noise_li, frame_rate, channels,$/;"	f
 get_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_encoder(self):$/;"	m	class:WhisperVQForConditionalGeneration
 get_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_encoder(self):$/;"	m	class:WhisperVQModel
-get_encoder	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_encoder(self):$/;"	m	class:WhisperForConditionalGeneration
 get_encoder	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_encoder(self):$/;"	m	class:WhisperModel
 get_exportable_module	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/onnx/export.py	/^def get_exportable_module(matcha, vocoder, n_timesteps):$/;"	f
 get_extra_padding_for_conv1d	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^def get_extra_padding_for_conv1d(x: torch.Tensor, kernel_size: int, stride: int,$/;"	f	typeref:typename:int
@@ -1366,7 +1368,6 @@ get_input_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.
 get_input_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_input_embeddings(self):$/;"	m	class:WhisperVQDecoder
 get_input_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_input_embeddings(self):$/;"	m	class:WhisperVQModel
 get_input_embeddings	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_input_embeddings(self) -> nn.Module:$/;"	m	class:WhisperEncoder	typeref:typename:nn.Module
-get_input_embeddings	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_input_embeddings(self) -> nn.Module:$/;"	m	class:WhisperForConditionalGeneration	typeref:typename:nn.Module
 get_input_embeddings	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_input_embeddings(self):$/;"	m	class:WhisperDecoder
 get_input_embeddings	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_input_embeddings(self):$/;"	m	class:WhisperModel
 get_inputs	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/onnx/export.py	/^def get_inputs(is_multi_speaker):$/;"	f
@@ -1383,7 +1384,6 @@ get_mel	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/data/text_mel_dat
 get_metric_value	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/utils.py	/^def get_metric_value(metric_dict: Dict[str, Any], metric_name: str) -> float:$/;"	f	typeref:typename:float
 get_output_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_output_embeddings(self):$/;"	m	class:WhisperForCausalLM
 get_output_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_output_embeddings(self):$/;"	m	class:WhisperVQForConditionalGeneration
-get_output_embeddings	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_output_embeddings(self):$/;"	m	class:WhisperForConditionalGeneration
 get_padding	steer_moe/tokenizer/glm4/cosyvoice/utils/common.py	/^def get_padding(kernel_size, dilation=1):$/;"	f
 get_padding	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/xutils.py	/^def get_padding(kernel_size, dilation=1):$/;"	f
 get_pylogger	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/pylogger.py	/^def get_pylogger(name: str = __name__) -> logging.Logger:$/;"	f	typeref:typename:logging.Logger
@@ -1466,7 +1466,7 @@ librosa_mel_fn	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/audi
 linear_geglu	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^def linear_geglu(x, weight, bias=None):$/;"	f
 list_avaliable_spks	steer_moe/tokenizer/glm4/cosyvoice/cli/cosyvoice.py	/^    def list_avaliable_spks(self):$/;"	m	class:CosyVoice
 ljspeech_example_cacher	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/app.py	/^def ljspeech_example_cacher(text, n_timesteps, mel_temp, length_scale, spk=-1):$/;"	f
-llm_tokenizer	whisper_train/pre_process_word_correct_data.py	/^llm_tokenizer=AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])$/;"	v
+llm_tokenizer	whisper_train/pre_process_word_correct_data.py	/^llm_tokenizer=AutoTokenizer.from_pretrained("\/root\/autodl-tmp\/model\/Qwen2.5-7B-Ins-1M\/")$/;"	v
 load	steer_moe/tokenizer/glm4/cosyvoice/cli/model.py	/^    def load(self, llm_model, flow_model, hift_model):$/;"	m	class:CosyVoiceModel
 load_audio	steer_moe/tokenizer/whisper_Lv3/whisper.py	/^def load_audio(file: str, sr: int = SAMPLE_RATE):$/;"	f
 load_balancing_loss	steer_moe/utils.py	/^def load_balancing_loss(gating_scores):$/;"	f
@@ -1474,6 +1474,7 @@ load_bytesio_audio	steer_moe/tokenizer/whisper_Lv3/whisper.py	/^def load_bytesio
 load_checkpoint	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/xutils.py	/^def load_checkpoint(filepath, device):$/;"	f
 load_config	scripts/train.py	/^def load_config(path):$/;"	f
 load_config	scripts/train_layer_wise.py	/^def load_config(path: str) -> Dict:$/;"	f	typeref:typename:Dict
+load_data_test	whisper_train/data_process.py	/^def load_data_test():$/;"	f
 load_from_hub	scripts/train.py	/^def load_from_hub(model_class, repo_name, subfolder=None, revision=None, tokenizer_class=None):$/;"	f
 load_generation_config	whisper_train/main_word_correct_clips.py	/^    def load_generation_config(gen_config_arg: Union[str, GenerationConfig]) -> GenerationConfig/;"	m	class:Logged_Seq2SeqTrainer	typeref:typename:GenerationConfig
 load_hifigan	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/cli.py	/^def load_hifigan(checkpoint_path, device):$/;"	f
@@ -1484,7 +1485,11 @@ load_optimizer_state	scripts/train.py	/^def load_optimizer_state(trainer, optimi
 load_parquet_datasets	steer_moe/utils.py	/^def load_parquet_datasets(parquet_dirs):$/;"	f
 load_parquet_datasets_for_steermoe	scripts/train.py	/^def load_parquet_datasets_for_steermoe(parquet_dirs):$/;"	f
 load_parquet_datasets_for_steermoe	scripts/train_layer_wise.py	/^def load_parquet_datasets_for_steermoe(parquet_dirs: List[str]) -> DatasetDict:$/;"	f	typeref:typename:DatasetDict
+load_processed_data	whisper_train/data_process.py	/^    def load_processed_data(self):$/;"	m	class:DatasetCommonVoiceHindi
 load_quantize_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/utils.py	/^def load_quantize_encoder(model_path):$/;"	f
+load_raw_data	whisper_train/data_process.py	/^    def load_raw_data(self):$/;"	m	class:DatasetCommonVoiceCN
+load_raw_data	whisper_train/data_process.py	/^    def load_raw_data(self):$/;"	m	class:DatasetCommonVoiceHindi
+load_raw_data	whisper_train/data_process.py	/^    def load_raw_data(self):$/;"	m	class:DatasetFinAudioCN
 load_slience_data	whisper_train/generate_raw_parquet_multi_processing_word.py	/^def load_slience_data(music_dir_li, noise_dir_li):$/;"	f
 load_state_dict	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/data/text_mel_datamodule.py	/^    def load_state_dict(self, state_dict: Dict[str, Any]):$/;"	m	class:TextMelDataModule
 load_trainer_model	scripts/train.py	/^def load_trainer_model(model_class, model_dir, tokenizer_class=None):$/;"	f
@@ -1695,6 +1700,7 @@ prediction_step	whisper_train/main_word_correct_clips.py	/^    def prediction_st
 prepare_asr_dataset	scripts/train.py	/^def prepare_asr_dataset(dataset, audio_column, text_column, whisper_encoder, tokenizer, sample_r/;"	f
 prepare_asr_dataset	scripts/train_layer_wise.py	/^def prepare_asr_dataset(dataset, audio_column: str, text_column: str,$/;"	f
 prepare_dataset	steer_moe/utils.py	/^def prepare_dataset(batch, audio_column, text_column, whisper_processor, tokenizer, sample_rate=/;"	f
+prepare_dataset	whisper_train/data_process.py	/^    def prepare_dataset(self, batch):$/;"	m	class:HFDataProcessorPipeline
 prepare_dataset	whisper_train/pre_process_word_correct_data.py	/^def prepare_dataset(batch, audio_column, text_column, whisper_processor, tokenizer, sample_rate=/;"	f
 prepare_inputs_for_generation	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def prepare_inputs_for_generation($/;"	m	class:WhisperForCausalLM
 prepare_inputs_for_generation	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def prepare_inputs_for_generation($/;"	m	class:WhisperVQForConditionalGeneration
@@ -1728,6 +1734,11 @@ put	steer_moe/tokenizer/glm4/model_server.py	/^    def put(self, value):$/;"	m	c
 put_cos	whisper_train/generate_raw_parquet_multi_processing_word.py	/^def put_cos(f_parquet, meta_file_name, meta_file_id, client):$/;"	f
 quantized_token_ids	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    quantized_token_ids: Optional[torch.LongTensor] = None$/;"	v	class:QuantizedBaseModelOutput	typeref:typename:Optional[torch.LongTensor]
 rand_bool	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^def rand_bool(shape: Any, proba: float, device: Any = None) -> Tensor:$/;"	f	typeref:typename:Tensor
+raw_data_path	whisper_train/data_process.py	/^    raw_data_path = ".\/data\/common_voice_11_0"$/;"	v	class:DatasetCommonVoiceHindi
+raw_data_path	whisper_train/data_process.py	/^    raw_data_path = ".\/data\/common_voice_zh_CN\/raw_dataset"$/;"	v	class:DatasetCommonVoiceCN
+raw_dataset_cn_process	whisper_train/data_process.py	/^def raw_dataset_cn_process():$/;"	f
+raw_test_data_path	whisper_train/data_process.py	/^    raw_test_data_path = ".\/data\/finaudio_zh_test\/raw_dataset\/test"$/;"	v	class:DatasetFinAudioCN
+raw_train_data_path	whisper_train/data_process.py	/^    raw_train_data_path = ".\/data\/finaudio_zh\/raw_dataset\/train"$/;"	v	class:DatasetFinAudioCN
 read	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^    def read(self, name: str) -> bytes:$/;"	m	class:Tar	typeref:typename:bytes
 read_json_lists	steer_moe/tokenizer/glm4/cosyvoice/utils/file_utils.py	/^def read_json_lists(list_file):$/;"	f
 read_lists	steer_moe/tokenizer/glm4/cosyvoice/utils/file_utils.py	/^def read_lists(list_file):$/;"	f
@@ -1753,7 +1764,7 @@ respond	steer_moe/tokenizer/glm4/web_demo.py	/^        respond = submit_btn.clic
 rest	whisper_train/modules.py	/^    rest = wer_metric.compute(predictions=["good nidfht moon"], references=["good night moon"])$/;"	v
 rest	whisper_train/modules.py	/^    rest = wer_metric.compute(predictions=[a], references=[b])$/;"	v
 resume_from_model	whisper_train/main_word_correct_clips.py	/^        resume_from_model = f'\/root\/autodl-tmp\/ruitao\/whisper_test\/model\/whisper_large_v2_/;"	v
-return_attention_mask	steer_moe/utils.py	/^    return_attention_mask: bool = True$/;"	v	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:bool
+return_attention_mask	steer_moe/utils.py	/^    return_attention_mask: bool = False$/;"	v	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:bool
 rms_norm	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^def rms_norm(x, scale, eps):$/;"	f
 rotate_half	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer.py	/^def rotate_half(x):$/;"	f
 rotate_half	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer_use_mask.py	/^def rotate_half(x):$/;"	f
@@ -1794,7 +1805,6 @@ set_input_embeddings	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    d
 set_input_embeddings	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def set_input_embeddings(self, value: nn.Module):$/;"	m	class:WhisperEncoder
 set_output_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def set_output_embeddings(self, new_embeddings):$/;"	m	class:WhisperForCausalLM
 set_output_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def set_output_embeddings(self, new_embeddings):$/;"	m	class:WhisperVQForConditionalGeneration
-set_output_embeddings	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def set_output_embeddings(self, new_embeddings):$/;"	m	class:WhisperForConditionalGeneration
 set_step	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def set_step(self, step: int):$/;"	m	class:ConstantLR
 set_step	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def set_step(self, step: int):$/;"	m	class:NoamHoldAnnealing
 set_step	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def set_step(self, step: int):$/;"	m	class:WarmupLR
@@ -1894,7 +1904,6 @@ tokenize_waveform	steer_moe/efficient_layer_wise_whisper.py	/^    def tokenize_w
 tokenize_waveform	steer_moe/layer_wise_aligner.py	/^    def tokenize_waveform(self, audio, return_gating=False):$/;"	m	class:WhisperEncoderWithSteering
 tokenize_waveform	steer_moe/layer_wise_whisper.py	/^    def tokenize_waveform(self, audio, return_gating=False):$/;"	m	class:LayerWiseSteeringWhisperEncoder
 tokenize_waveform	steer_moe/tokenizer/whisper_Lv3/whisper.py	/^    def tokenize_waveform(self, audio, kimia_whisper_clip_silence=False):$/;"	m	class:WhisperEncoder
-tokenizer	whisper_train/pre_process_word_correct_data.py	/^tokenizer = WhisperTokenizer.from_pretrained(pretrained_model_name_or_path=model_path["whisper_l/;"	v
 top_modules	configs/stage2.json	/^    "top_modules": 1,$/;"	n	object:flops_profiler
 top_modules	configs/stage3.json	/^    "top_modules": 1,$/;"	n	object:flops_profiler
 top_p	steer_moe/tokenizer/glm4/web_demo.py	/^            top_p = gr.Number($/;"	v
@@ -1961,6 +1970,7 @@ warmup_num_steps	configs/stage3_wo_offload.json	/^      "warmup_num_steps": "aut
 weight_decay	configs/stage3.json	/^      "weight_decay": "auto"$/;"	s	object:optimizer.params
 weight_decay	configs/stage3_wo_offload.json	/^      "weight_decay": "auto"$/;"	s	object:optimizer.params
 wer_metric	whisper_train/modules.py	/^    wer_metric = load(".\/evaluation\/wer.py")$/;"	v
+whisper_encoder	whisper_train/pre_process_word_correct_data.py	/^whisper_encoder = WhisperEncoder(model_path["whisper_large-v2"])$/;"	v
 whisper_model	steer_moe/tokenizer/glm4/web_demo.py	/^    whisper_model, feature_extractor = None, None$/;"	v
 worker	steer_moe/tokenizer/glm4/model_server.py	/^    worker = ModelWorker(args.model_path, args.dtype, args.device)$/;"	v
 wrap	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/utils.py	/^    def wrap(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:$/;"	f	function:task_wrapper	typeref:typename:Tuple[Dict[str,Any],Dict[str,Any]]	file:

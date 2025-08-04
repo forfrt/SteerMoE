@@ -8,12 +8,17 @@ import yaml
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments, EarlyStoppingCallback, TrainerCallback
+from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments, EarlyStoppingCallback, TrainerCallback, WhisperFeatureExtractor
 from datasets import Audio, load_dataset, concatenate_datasets, DatasetDict, load_metric, load_from_disk
 import tqdm
 import os
 import numpy as np
 from typing import Dict, List, Optional, Tuple
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(process)d - %(levelname)s - %(filename)s>%(funcName)s>%(lineno)d - %(message)s')
 
 # Import our models
 import sys
@@ -203,6 +208,7 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
 
     print("Loading tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])
+    feature_extractor = WhisperFeatureExtractor.from_pretrained(config['whisper_encoder']['model_path'])
     
     # Add padding token if not present
     if tokenizer.pad_token is None:
@@ -216,16 +222,19 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         num_experts=config['steering']['num_experts'],
         steering_scale=config['steering']['steering_scale']
     )
+    logging.info(f"layer_wise_whisper.original_encoder: {layer_wise_whisper.original_encoder}")
 
     # Create main model
     print("Creating SteerMoE model...")
     model = SteerMoEEfficientLayerWiseModel(
-        whisper_encoder_path=layer_wise_whisper,
+        whisper_encoder=layer_wise_whisper,
         llm_decoder=llm_decoder,
         num_experts=config['steering']['num_experts'],
         max_prompt_tokens=config.get('max_prompt_tokens', 512),
         use_adapter=config.get('use_adapter', True)
     )
+
+    logging.info(f"model.whisper_encoder.original_encoder: {model.whisper_encoder.original_encoder}")
 
     # Set model to training mode
     model.train()
@@ -252,12 +261,12 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
     print(f"Dataset: {type(dataset)} {dataset}")
 
     # Filter dataset if needed
-    if config.get('filter_dataset', True):
-        dataset = filter_dataset_by_length(
-            dataset,
-            max_audio_length=config.get('max_audio_length', 30.0),
-            max_text_length=config.get('max_text_length', 448)
-        )
+    # if config.get('filter_dataset', True):
+    #     dataset = filter_dataset_by_length(
+    #         dataset,
+    #         max_audio_length=config.get('max_audio_length', 30.0),
+    #         max_text_length=config.get('max_text_length', 448)
+    #     )
 
     # Dataset is already preprocessed with input_features and labels
     # No need for additional preparation
@@ -275,6 +284,7 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
     # Create data collator for preprocessed data
     textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")  # Default Chinese prompt
     data_collator = DataCollatorSpeechSeqSeqWithPadding(
+        feature_extractor=feature_extractor,
         tokenizer=tokenizer,
         textual_prompt=textual_prompt,
         max_length=config.get('max_text_length', 448),
@@ -456,6 +466,7 @@ if __name__ == "__main__":
                        help='Mode: train, eval, or analyze')
     parser.add_argument('--model_path', type=str, default=None,
                        help='Path to model for evaluation/analysis')
+    parser.add_argument("--local_rank", type=int, default=0)
 
     args = parser.parse_args()
 
