@@ -3,13 +3,15 @@
 # Whisper Encoder Configuration
 whisper_encoder:
   # model_path: "/root/autodl-tmp/ruitao/whisper_test/model/whisper_large_v2_WORD_CORRECT_14/model_end"  # Update with actual path
-  model_path: "/root/autodl-tmp/ruitao/whisper_test/model/whisper_large_v2_WORD_CORRECT_14/model_end"  # Update with actual path
+  model_path: "/root/autodl-tmp/model/whisper-large-v3"  # Update with actual path
   feature_dim: 1280
   num_layers: 32
 
 # LLM Decoder Configuration
 llm_decoder:
-  model_name: "/root/autodl-tmp/model/Qwen2.5-7B-Ins-1M/"
+  # model_name: "/root/autodl-tmp/model/Qwen2.5-7B-Ins-1M/"
+  # model_name: "/root/autodl-tmp/model/Qwen2.5-3B-Instruct/"
+  model_name: "/root/autodl-tmp/model/Qwen2.5-0.5B-Instruct/"
   max_length: 512
   use_cache: false  # Disable cache during training
 
@@ -25,7 +27,7 @@ steering:
 training:
   output_dir: "./results/layer_wise_steermoe"
   logging_dir: "./logs/layer_wise_steermoe"
-  batch_size: 4
+  batch_size: 4 
   epochs: 10
   learning_rate: 1e-4
   steering_learning_rate: 1e-3
@@ -34,18 +36,18 @@ training:
   warmup_steps: 1000
   gradient_clipping: 1.0
   fp16: true
-  use_deepspeed: false
+  use_deepspeed: true  # Enable DeepSpeed for multi-GPU efficiency
 
 # Dataset Configuration
 parquet_dirs:
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_1_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_2_processed_in_batch/"
+  - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_1_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_2_nots_processed_in_batch/"
 
 audio_column: "audio"
 text_column: "text"
 sample_rate: 16000
 max_audio_length: 30.0  # seconds
-max_text_length: 448
+max_text_length: 2048
 filter_dataset: true
 
 # Textual Prompt Configuration
@@ -55,8 +57,8 @@ textual_prompt: "请转写以下音频内容为文字："  # Chinese prompt for 
 max_prompt_tokens: 512
 use_adapter: true
 save_total_limit: 2
-logging_steps: 10
-eval_steps: 500
+logging_steps: 100  # Reduced from 10 to 100 for less overhead
+eval_steps: 1000    # Reduced evaluation frequency for better performance
 save_steps: 1000
 
 # Callbacks Configuration

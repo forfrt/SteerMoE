@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Tuple
 import logging
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s %(process)d - %(levelname)s - %(filename)s>%(funcName)s>%(lineno)d - %(message)s')
 
 # Import our models
@@ -179,7 +179,7 @@ def create_layer_wise_optimizer(model, learning_rate: float = 1e-4,
 
 
 def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
-                             deepspeed_config_path: str = 'configs/deepspeed_config.json',
+                             deepspeed_config_path: str = 'configs/stage2_simple.json',
                              eval_dataset_name: Optional[str] = None,
                              custom_test_set_path: Optional[str] = None,
                              resume_from_checkpoint: Optional[str] = None):
@@ -243,6 +243,7 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
     print("Loading dataset...")
     parquet_dirs = config.get('parquet_dirs', [])
     batch_size = config['training']['batch_size']
+    logging.info(f"batch_size: {batch_size}")
 
     # Expand parquet directories if they contain subdirectories
     expanded_dirs = []
@@ -283,40 +284,65 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
 
     # Create data collator for preprocessed data
     textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")  # Default Chinese prompt
+    max_length = config.get('max_text_length', 2048)
+    
+    # Create data collator with fixed max length for consistent evaluation
     data_collator = DataCollatorSpeechSeqSeqWithPadding(
         feature_extractor=feature_extractor,
         tokenizer=tokenizer,
         textual_prompt=textual_prompt,
-        max_length=config.get('max_text_length', 448),
+        max_length=max_length,  # Fixed max length
         audio_column="input_features",  # Use preprocessed audio features
         text_column="labels"  # Use preprocessed labels
     )
 
     # Create custom compute metrics function
     def compute_metrics_trainer(eval_pred):
-        logits, labels = eval_pred
-        preds = logits.argmax(-1)
+        logging.info(f"start evaluation: eval_pred: {eval_pred}")
+
+        try:
+            logits, labels = eval_pred
+            preds = logits.argmax(-1)
         
-        # Decode predictions and labels
-        pred_str = []
-        label_str = []
+            # Decode predictions and labels
+            pred_str = []
+            label_str = []
         
-        for pred_seq, label_seq in zip(preds, labels):
-            # Remove padding and special tokens from predictions
-            pred_tokens = pred_seq[pred_seq != tokenizer.pad_token_id]
-            pred_text = tokenizer.decode(pred_tokens, skip_special_tokens=True)
-            pred_str.append(pred_text)
-            
-            # Remove -100 tokens from labels
-            label_tokens = label_seq[label_seq != -100]
-            label_text = tokenizer.decode(label_tokens, skip_special_tokens=True)
-            label_str.append(label_text)
+            for pred_seq, label_seq in zip(preds, labels):
+                # Remove padding and special tokens from predictions
+                if hasattr(pred_seq, '__len__'):
+                    pred_tokens = pred_seq[pred_seq != tokenizer.pad_token_id]
+                    pred_text = tokenizer.decode(pred_tokens, skip_special_tokens=True)
+                    pred_str.append(pred_text)
+
+                # Remove -100 tokens from labels
+                if hasattr(label_seq, '__len__'):
+                    label_tokens = label_seq[label_seq != -100]
+                    label_text = tokenizer.decode(label_tokens, skip_special_tokens=True)
+                    label_str.append(label_text)
         
-        cer_metric = load_metric('cer')
-        wer_metric = load_metric('wer')
-        cer = cer_metric.compute(predictions=pred_str, references=label_str)
-        wer = wer_metric.compute(predictions=pred_str, references=label_str)
-        return {"cer": cer, "wer": wer}
+            if len(pred_str) > 0 and len(label_str) > 0:
+                try:
+                    cer_metric = load_metric('cer')
+                    wer_metric = load_metric('wer')
+                    cer = cer_metric.compute(predictions=pred_str, references=label_str)
+                    wer = wer_metric.compute(predictions=pred_str, references=label_str)
+                    return {"cer": cer, "wer": wer}
+                except Exception as e:
+                    logging.warning(f"Metrics computation failed: {e}")
+                    return {"cer": 1.0, "wer": 1.0}  # Return default values
+            else:
+                return {"cer": 1.0, "wer": 1.0}  # Return default values
+                
+        except Exception as e:
+            logging.error(f"Evaluation error: {e}")
+            return {"cer": 1.0, "wer": 1.0}  # Return default values
+        # cer_metric = load_metric('cer')
+        # wer_metric = load_metric('wer')
+        # cer = cer_metric.compute(predictions=pred_str, references=label_str)
+        # wer = wer_metric.compute(predictions=pred_str, references=label_str)
+        # logging.info(f"end evaluation: pred_str: {pred_str}, ref_str: {label_str}, cer: {cer}, wer: {wer}")
+        # return {"cer": cer, "wer": wer}
 
     # Training arguments
     training_args = TrainingArguments(
@@ -324,8 +350,8 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         num_train_epochs=config['training']['epochs'],
-        evaluation_strategy="epoch",
-        save_strategy="epoch",
+        evaluation_strategy="steps",  # Re-enable evaluation with fix
+        save_strategy="steps",
         logging_dir=config['training']['logging_dir'],
         deepspeed=deepspeed_config_path if config.get('use_deepspeed', False) else None,
         fp16=config.get('fp16', True),
@@ -338,10 +364,15 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         warmup_steps=config.get('warmup_steps', 0),
         weight_decay=config.get('weight_decay', 0.01),
         logging_steps=config.get('logging_steps', 10),
-        eval_steps=config.get('eval_steps', 500),
+        # eval_steps=config.get('eval_steps', 500),
+        eval_steps=config.get('eval_steps', 50),
         save_steps=config.get('save_steps', 1000),
         dataloader_drop_last=True,  # Ensure consistent batch sizes
         remove_unused_columns=False,  # Keep all columns for our custom data collator
+        # gradient_checkpointing=True,  # Enable gradient checkpointing for memory efficiency
+        dataloader_num_workers=4,  # Add parallel data loading
+        dataloader_pin_memory=True,  # Pin memory for faster GPU transfer
+        eval_accumulation_steps=1,  # Process evaluation batches immediately to avoid memory issues
     )
 
     # Create callbacks
@@ -456,7 +487,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train SteerMoE with layer-wise steering')
     parser.add_argument('--config', type=str, default='configs/layer_wise.yaml',
                        help='Path to configuration file')
-    parser.add_argument('--deepspeed_config', type=str, default='configs/deepspeed_config.json',
+    parser.add_argument('--deepspeed_config', type=str, default='configs/stage2_simple.json',
                        help='Path to DeepSpeed configuration')
     parser.add_argument('--eval_dataset', type=str, default=None,
                        help='Evaluation dataset name')

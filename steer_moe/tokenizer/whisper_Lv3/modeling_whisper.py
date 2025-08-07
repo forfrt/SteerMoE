@@ -958,8 +958,8 @@ class WhisperEncoder(WhisperPreTrainedModel):
         self.layerdrop = config.encoder_layerdrop
 
         embed_dim = config.d_model
-        # self.num_mel_bins = 128
-        self.num_mel_bins = 80
+        self.num_mel_bins = 128
+        # self.num_mel_bins = 80
         self.padding_idx = config.pad_token_id
         self.max_source_positions = config.max_source_positions
         self.embed_scale = math.sqrt(embed_dim) if config.scale_embedding else 1.0

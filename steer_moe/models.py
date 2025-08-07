@@ -19,7 +19,7 @@ from .layer_wise_whisper import LayerWiseSteeringWhisperEncoder
 from .efficient_layer_wise_whisper import EfficientLayerWiseSteeringWhisperEncoder
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s %(process)d - %(levelname)s - %(filename)s>%(funcName)s>%(lineno)d - %(message)s')
 # TODO: Import or load LLM decoder (e.g., from transformers)
 
@@ -540,6 +540,34 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
             Dictionary with steering analysis
         """
         return self.whisper_encoder.get_steering_analysis(gating_scores)
+
+    def gradient_checkpointing_enable(self):
+        """
+        Enable gradient checkpointing for memory efficiency.
+        """
+        # Enable gradient checkpointing on the LLM decoder if it supports it
+        if hasattr(self.llm_decoder, 'gradient_checkpointing_enable'):
+            self.llm_decoder.gradient_checkpointing_enable()
+        
+        # Enable gradient checkpointing on the whisper encoder if it supports it
+        if hasattr(self.whisper_encoder, 'gradient_checkpointing_enable'):
+            self.whisper_encoder.gradient_checkpointing_enable()
+        elif hasattr(self.whisper_encoder, 'original_encoder') and hasattr(self.whisper_encoder.original_encoder, 'gradient_checkpointing_enable'):
+            self.whisper_encoder.original_encoder.gradient_checkpointing_enable()
+            
+    def gradient_checkpointing_disable(self):
+        """
+        Disable gradient checkpointing.
+        """
+        # Disable gradient checkpointing on the LLM decoder if it supports it
+        if hasattr(self.llm_decoder, 'gradient_checkpointing_disable'):
+            self.llm_decoder.gradient_checkpointing_disable()
+            
+        # Disable gradient checkpointing on the whisper encoder if it supports it
+        if hasattr(self.whisper_encoder, 'gradient_checkpointing_disable'):
+            self.whisper_encoder.gradient_checkpointing_disable()
+        elif hasattr(self.whisper_encoder, 'original_encoder') and hasattr(self.whisper_encoder.original_encoder, 'gradient_checkpointing_disable'):
+            self.whisper_encoder.original_encoder.gradient_checkpointing_disable()
 
     def get_device(self):
         return next(self.parameters()).device

@@ -11,7 +11,7 @@ import logging
 from typing import List, Optional, Tuple
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s %(process)d - %(levelname)s - %(filename)s>%(funcName)s>%(lineno)d - %(message)s')
 
 def _get_num_layers(encoder):
@@ -196,10 +196,9 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             mel_features: Mel spectrogram features from original encoder
             return_gating: Whether to return gating scores
             
-        Returns:
+        Returns"""  """:
             Steered features with optional gating scores
         """
-        logging.info(f"original_encoder: {self.original_encoder}")
         # Get the speech encoder
         if hasattr(self.original_encoder, 'speech_encoder'):
             speech_encoder = self.original_encoder.speech_encoder
@@ -234,7 +233,7 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             
         # Apply dropout if present
         if hasattr(speech_encoder, 'dropout'):
-            x = speech_encoder.dropout(x)
+            x = nn.functional.dropout(x, p=speech_encoder.dropout, training=speech_encoder.training)
         else:
             logging.error(f"no dropout layer found")
         
@@ -255,7 +254,7 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
                 continue
                 
             # Apply original layer
-            layer_output = layer(x)
+            layer_output = layer(x)[0]
             
             # Compute steering for this layer using the single router
             router_output = self.router(layer_output)  # (batch, seq_len, num_experts * num_layers)

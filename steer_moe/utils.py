@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Union, Optional
 import logging
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(filename)s>%(funcName)s>%(lineno)d - %(message)s')
 
 def load_balancing_loss(gating_scores):
@@ -142,7 +142,7 @@ class DataCollatorSpeechSeqSeqWithPadding:
     feature_extractor: Any
     tokenizer: Any
     textual_prompt: Optional[str] = None
-    max_length: int = 512
+    max_length: int = 2048
     audio_column: str = "input_features"  # Preprocessed audio features
     text_column: str = "labels"  # Preprocessed tokenized labels
     return_attention_mask: bool = False
@@ -178,7 +178,7 @@ class DataCollatorSpeechSeqSeqWithPadding:
         else:
             batch_audio = torch.empty(batch_size, 128, 3000, dtype=torch.float32)
 
-        logging.info(f"batch_audio: {batch_audio.shape} {batch_audio.dtype} {batch_audio}")
+        # logging.info(f"batch_audio: {batch_audio.shape} {batch_audio.dtype} {batch_audio}")
         
         # Handle preprocessed labels (already tokenized)
         labels = []
@@ -244,29 +244,47 @@ class DataCollatorSpeechSeqSeqWithPadding:
         # Pad lables 
         label_features=[{"input_ids": input_ids} for input_ids in labels]
         if label_features:
-            labels_batch = self.tokenizer.pad(label_features, return_tensors="pt")
+            # labels_batch = self.tokenizer.pad(label_features, return_tensors="pt")
+            labels_batch = self.tokenizer.pad(
+                label_features, 
+                return_tensors="pt",
+                # padding_value=-100,
+                max_length=self.max_length,
+                padding="max_length",
+                truncation=True
+            )
+
             batch_labels = labels_batch["input_ids"]
+            batch_labels = batch_labels.masked_fill(labels_batch.attention_mask.ne(1), -100)
             # batch_labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
             # if (batch_labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
             #     batch_labels = batch_labels[:, 1:]
         else:
             batch_labels = torch.empty(batch_size, 0, dtype=torch.long)
 
-        logging.info(f"batch_labels: {batch_labels.shape}, {batch_labels.dtype}, {batch_labels}")
+        # logging.info(f"batch_labels: {batch_labels.shape}, {batch_labels.dtype}, {batch_labels}")
 
         # Pad prompt_tokens+labels
         input_features=[{"input_ids": input_ids} for input_ids in decoder_input_ids]
         if label_features:
-            input_ids_batch = self.tokenizer.pad(input_features, return_tensors="pt")
+            # input_ids_batch = self.tokenizer.pad(input_features, return_tensors="pt")
+            input_ids_batch = self.tokenizer.pad(
+                input_features, 
+                return_tensors="pt",
+                # padding_value=-100,
+                max_length=self.max_length,
+                padding="max_length",
+                truncation=True
+            )
             batch_input_ids = input_ids_batch["input_ids"]
             # batch_input_ids = labels_batch["input_ids"].masked_fill(input_ids_batch.attention_mask.ne(1), -100)
             # if (batch_input_ids[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
             #     batch_input_ids = batch_input_ids[:, 1:]
+            batch_input_ids = batch_input_ids.masked_fill(input_ids_batch.attention_mask.ne(1), -100)
         else:
             batch_input_ids = torch.empty(batch_size, 0, dtype=torch.long)
 
-        logging.info(f"batch_input_ids: {batch_input_ids.shape}, {batch_input_ids.dtype}, {batch_input_ids}")
-
+        # logging.info(f"batch_input_ids: {batch_input_ids.shape}, {batch_input_ids.dtype}, {batch_input_ids}")
         
         # Create final batch - use different key name for audio to match model expectations
         batch = {

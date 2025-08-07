@@ -14,11 +14,13 @@
   "zero_optimization": {
     "stage": 2,
     "allgather_partitions": true,
-    "allgather_bucket_size": 2e8,
+    "allgather_bucket_size": 5e8,
     "reduce_scatter": true,
-    "reduce_bucket_size": 2e8,
-    "overlap_comm": false,
-    "contiguous_gradients": true
+    "reduce_bucket_size": 5e8,
+    "overlap_comm": true,
+    "contiguous_gradients": true,
+    "sub_group_size": 1e9,
+    "round_robin_gradients": true
   },
   "flops_profiler": {
     "enabled": true,
