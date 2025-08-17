@@ -4,11 +4,6 @@
  * github: https://github.com/forfrt
 """
 
-"""
- * author Ruitao Feng
- * created on 24-03-2025
- * github: https://github.com/forfrt
-"""
 
 import io
 import logging
@@ -25,25 +20,6 @@ from pydub.generators import WhiteNoise
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
-
-import setting
-from utils import CosFileServer
-
-cos = CosFileServer(setting.COS_BUCKET, setting.COS_SECRET_ID,
-                    setting.COS_SECRET_KEY)
-
-
-def put_cos(f_parquet, meta_file_name, meta_file_id, client):
-    try:
-        #     上传parquet对象
-        response_parquet = client.put_object(
-            Bucket='sj-ai-tmp-files-1307267266',
-            Body=f_parquet.getvalue(),
-            Key=
-            f'{setting.COS_SECRET_KEY}/{meta_file_id}_{meta_file_name.rsplit(".", 1)[-2]}_{meta_file_name.rsplit(".", 1)[-1]}_train.parquet',
-            EnableMD5=False)
-    except Exception as e:
-        raise Exception(f'{meta_file_name}~上传parquet失败：{str(e)}')
 
 
 def generate_timestamps(chunks, actual_start_time):
@@ -596,9 +572,8 @@ if __name__=='__main__':
         # tmp_file_path=f"/root/autodl-nas/ruitao/data/raw/audio2clips/{batch_tag}/"
         tmp_file_path = f"/root/autodl-nas/ruitao/data/raw/{batch_tag}/"
     else:
-        batch_tag = f'{setting.SOURCE_TAG}_{setting.BATCH_TAG}'
-        tmp_file_path = f"/root/autodl-nas/ruitao/data/raw/{batch_tag}/"
-        print(f"batch_tag from setting.json: {batch_tag}")
+        print("warning: batch_tag not provided, exit")
+        exit()
 
     music_dir_li = [
         '/root/autodl-tmp/ruitao/whisper_test/data/musan/music/fma-western-art',
@@ -739,7 +714,3 @@ if __name__=='__main__':
             pool.map(handle_one_file, ls)
 
     process_list_in_parallel(audio_files[:])
-
-    # 标记完成-
-    with open(f"../status_folder/generate_parquet_{batch_tag}.done", "w") as f:
-        f.write("done")

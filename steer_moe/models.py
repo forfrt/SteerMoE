@@ -359,6 +359,16 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         self.use_adapter = use_adapter
         self.max_prompt_tokens = max_prompt_tokens
 
+         # Cache vocab size directly from the decoder’s embedding matrix
+        self.vocab_size = self.llm_decoder.get_input_embeddings().num_embeddings
+        # (optional) pad id if you want to assert pads are legal
+        self.pad_token_id = getattr(getattr(self.llm_decoder, "config", None), "pad_token_id", None)
+
+        # Ensure the weights don't share memory
+        # self.llm_decoder.model.embed_tokens.weight = self.llm_decoder.model.embed_tokens.weight.clone()
+        # self.llm_decoder.lm_head.weight = self.llm_decoder.lm_head.weight.clone()
+
+
         # Freeze decoder
         for p in self.llm_decoder.parameters():
             p.requires_grad = False
@@ -375,7 +385,8 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
                 decoder_input_dim = encoder_output_dim
 
 
-            logging.info(f"decoder_input_dim: {decoder_input_dim}, encoder_output_dim: {encoder_output_dim}")
+            # logging.debug(f"decoder_input_dim: {decoder_input_dim}, encoder_output_dim: {encoder_output_dim}")
+            # decoder_input_dim: 896, encoder_output_dim: 1280
             
             if encoder_output_dim != decoder_input_dim:
                 self.prompt_proj = nn.Linear(encoder_output_dim, decoder_input_dim)
@@ -433,7 +444,8 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         if self.max_prompt_tokens is not None:
             audio_prompts = audio_prompts[:, :self.max_prompt_tokens, :]
             
-        logging.debug(f"h_audio: {h_audio.shape}, {h_audio.dtype}, {h_audio}")
+        # logging.debug(f"h_audio: {h_audio.shape}, {h_audio.dtype}, {h_audio}")
+        # h_audio: torch.Size([4, 1500, 1280]), torch.float32
 
         # 4. Handle pure audio generation case
         if decoder_input_ids is None:
@@ -449,6 +461,14 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
                 else:
                     return audio_prompts
 
+        # defensive checks
+        assert (decoder_input_ids >= 0).all()
+        assert (decoder_input_ids < self.vocab_size).all()
+
+
+        # logging.debug(f"decoder_input_ids: {decoder_input_ids.shape}, {decoder_input_ids.dtype}, {decoder_input_ids}")
+        #  decoder_input_ids: torch.Size([4, 1024]), torch.int64,
+
         # 5. Get text embeddings from decoder
         if hasattr(self.llm_decoder, 'model') and hasattr(self.llm_decoder.model, 'embed_tokens'):
             # LLaMA-like decoder (Qwen, LLaMA, etc.)
@@ -463,7 +483,9 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
             raise ValueError("Could not find embedding method for decoder. Please adapt for your LLM.")
 
 
-        logging.debug(f"text_embeds: {text_embeds.shape}, {text_embeds.dtype}, {text_embeds}")
+        # logging.debug(f"text_embeds: {text_embeds.shape}, {text_embeds.dtype}, {text_embeds}")
+        # text_embeds: torch.Size([4, 1024, 896]), torch.float32,
+
         # 6. Concatenate audio prompts with text embeddings
         # inputs_embeds: Format: [audio_prompts, text_embeds] = [audio_prompts, text_prompts, labels]
         inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)
@@ -528,6 +550,70 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
                 return output, gating_scores
         else:
             return output
+
+    def generate(self, input_features, decoder_input_ids=None, **kwargs):
+        """
+        Generates token sequences autoregressively.
+        This method prepares the audio prompt embeddings and then calls the
+        underlying LLM decoder's generate method.
+        
+        Args:
+            input_features: The preprocessed audio features from the WhisperFeatureExtractor.
+            **kwargs: Additional arguments to be passed to the llm_decoder.generate() method,
+                      such as max_new_tokens, num_beams, do_sample, etc.
+        """
+        # Ensure the model is in evaluation mode for generation
+        self.eval()
+
+        # 1. Get audio embeddings from the Whisper encoder
+        # This is the first part of your forward pass. We don't need gating scores for inference.
+        h_audio = self.whisper_encoder._forward_with_steering(input_features, return_gating=False)
+
+        # 2. Project the audio embeddings to the LLM's dimension if needed
+        if self.use_adapter and self.prompt_proj is not None:
+            audio_prompts = self.prompt_proj(h_audio)
+        else:
+            audio_prompts = h_audio
+
+        # 3. Limit the prompt length if specified
+        if self.max_prompt_tokens is not None:
+            audio_prompts = audio_prompts[:, :self.max_prompt_tokens, :]
+
+        # 5. Get text embeddings from decoder
+        if hasattr(self.llm_decoder, 'model') and hasattr(self.llm_decoder.model, 'embed_tokens'):
+            # LLaMA-like decoder (Qwen, LLaMA, etc.)
+            text_embeds = self.llm_decoder.model.embed_tokens(decoder_input_ids)
+        elif hasattr(self.llm_decoder, 'transformer') and hasattr(self.llm_decoder.transformer, 'wte'):
+            # GPT-2 like decoder
+            text_embeds = self.llm_decoder.transformer.wte(decoder_input_ids)
+        elif hasattr(self.llm_decoder, 'get_input_embeddings'):
+            # Generic approach
+            text_embeds = self.llm_decoder.get_input_embeddings()(decoder_input_ids)
+        else:
+            raise ValueError("Could not find embedding method for decoder. Please adapt for your LLM.")
+
+
+        # logging.debug(f"text_embeds: {text_embeds.shape}, {text_embeds.dtype}, {text_embeds}")
+        # text_embeds: torch.Size([4, 1024, 896]), torch.float32,
+
+        # 6. Concatenate audio prompts with text embeddings
+        # inputs_embeds: Format: [audio_prompts, text_embeds] = [audio_prompts, text_prompts, labels]
+        inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)
+        # inputs_embeds: (batch, audio_seq_len + text_seq_len, decoder_dim)
+        logging.debug(f"inputs_embeds: {inputs_embeds.shape}, {inputs_embeds.dtype}, {inputs_embeds}")
+
+        # 4. Create an attention mask for the audio prompts. This is crucial.
+        batch_size, total_seq_len = inputs_embeds.shape[:2]
+        attention_mask = torch.ones(batch_size, total_seq_len, device=inputs_embeds.device, dtype=torch.long)
+
+        # 5. Delegate to the LLM decoder's powerful generate method
+        # We pass our audio prompts as `inputs_embeds`. The LLM will treat these as a prefix
+        # and start generating text tokens immediately after.
+        return self.llm_decoder.generate(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask,
+            **kwargs  # Pass through all other generation settings
+        )
 
     def get_steering_analysis(self, gating_scores):
         """

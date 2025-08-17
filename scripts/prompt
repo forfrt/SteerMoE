@@ -1,0 +1,922 @@
+here is the source code:
+
+datacollator:
+
+@dataclass
+class DataCollatorSpeechSeqSeqWithPadding:
+    """
+    Enhanced data collator for SteerMoE model that handles preprocessed audio features and labels.
+    Works with preprocessed datasets that have 'input_features' and 'labels' columns.
+    """
+    feature_extractor: Any
+    tokenizer: Any
+    textual_prompt: Optional[str] = None
+    max_length: int = 1024
+    audio_column: str = "input_features"  # Preprocessed audio features
+    text_column: str = "labels"  # Preprocessed tokenized labels
+    return_attention_mask: bool = False
+    
+    def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+        """
+        Collate a batch of preprocessed features for SteerMoE training.
+        
+        Args:
+            features: List of dictionaries with input_features, labels, etc.
+            
+        Returns:
+            Batch dictionary with padded tensors
+        """
+        batch_size = len(features)
+        
+        # Handle preprocessed audio features
+        audio_features = []
+        for feature in features:
+            if self.audio_column in feature:
+                audio_feat = feature[self.audio_column]
+                if isinstance(audio_feat, torch.Tensor):
+                    audio_features.append(audio_feat)
+                else:
+                    audio_features.append(torch.tensor(audio_feat, dtype=torch.float32))
+            else:
+                raise KeyError(f"Expected '{self.audio_column}' in features")
+        
+        # Pad audio features to same length (these are already processed Whisper features)
+        audio_features=[{"input_features": audio_feat} for audio_feat in audio_features]
+        if audio_features:
+            batch_audio=self.feature_extractor.pad(audio_features, return_tensors="pt").input_features
+        else:
+            batch_audio = torch.empty(batch_size, 128, 3000, dtype=torch.float32)
+
+        # logging.info(f"batch_audio: {batch_audio.shape} {batch_audio.dtype} {batch_audio}")
+        
+        # Handle preprocessed labels (already tokenized)
+        labels = []
+        decoder_input_ids = []
+        
+        for feature in features:
+            if self.text_column in feature:
+                label_ids = feature[self.text_column]
+                if isinstance(label_ids, torch.Tensor):
+                    label_ids = label_ids.squeeze()
+                else:
+                    label_ids = torch.tensor(label_ids, dtype=torch.long).squeeze()
+
+                logging.debug(f"label_ids: {label_ids.shape}, {label_ids.dtype}, {label_ids}")
+                
+                # Remove padding tokens and special tokens for processing
+                if isinstance(label_ids, torch.Tensor):
+                    # Remove padding tokens (-100 and pad_token_id)
+                    valid_mask = (label_ids != -100) & (label_ids != self.tokenizer.pad_token_id)
+                    if valid_mask.any():
+                        clean_labels = label_ids[valid_mask]
+                    else:
+                        clean_labels = torch.tensor([], dtype=torch.long)
+                else:
+                    clean_labels = torch.tensor(label_ids, dtype=torch.long)
+
+                logging.debug(f"clean_labels: {clean_labels.shape}, {clean_labels.dtype}, {clean_labels}")
+                
+                # Create decoder input with optional textual prompt
+                if self.textual_prompt is not None and len(clean_labels) > 0:
+                    # Tokenize the textual prompt
+                    prompt_tokens = self.tokenizer.encode(
+                        self.textual_prompt, 
+                        add_special_tokens=False,
+                        return_tensors="pt"
+                    ).squeeze(0)
+
+                    logging.debug(f"prompt_tokens: {prompt_tokens.shape}, {prompt_tokens.dtype}, {prompt_tokens}")
+                    
+                    # Combine prompt + clean labels for decoder input
+                    decoder_input = torch.cat([prompt_tokens, clean_labels])
+                    # decoder_input = prompt_tokens 
+                    
+                    # Labels should be the original clean labels only (prompt gets masked in model)
+                    empty_prompt=torch.full_like(prompt_tokens, fill_value=-100)
+                    label=torch.cat([empty_prompt, clean_labels])
+
+                    # label = clean_labels.clone()
+                else:
+                    # No prompt, use clean labels directly
+                    decoder_input = clean_labels.clone()
+                    label = clean_labels.clone()
+                
+                logging.debug(f"decoder_input: {decoder_input.shape}, {decoder_input.dtype}, {decoder_input}")
+                logging.debug(f"label: {label.shape}, {label.dtype}, {label}")
+                decoder_input_ids.append(decoder_input)
+                labels.append(label)
+            else:
+                # No labels provided - create empty tensors
+                decoder_input_ids.append(torch.tensor([], dtype=torch.long))
+                labels.append(torch.tensor([], dtype=torch.long))
+
+        # Pad lables 
+        label_features=[{"input_ids": input_ids} for input_ids in labels]
+        if label_features:
+            # labels_batch = self.tokenizer.pad(label_features, return_tensors="pt")
+            labels_batch = self.tokenizer.pad(
+                label_features, 
+                return_tensors="pt",
+                # padding_value=-100,
+                max_length=self.max_length,
+                padding="max_length",
+            )
+
+            batch_labels = labels_batch["input_ids"]
+            batch_labels = batch_labels.masked_fill(labels_batch.attention_mask.ne(1), -100)
+            # batch_labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
+            # if (batch_labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
+            #     batch_labels = batch_labels[:, 1:]
+        else:
+            batch_labels = torch.empty(batch_size, 0, dtype=torch.long)
+
+        logging.info(f"batch_labels: {batch_labels.shape}, {batch_labels.dtype}, {batch_labels}")
+
+        # Pad prompt_tokens+labels
+        input_features=[{"input_ids": input_ids} for input_ids in decoder_input_ids]
+        if label_features:
+            # input_ids_batch = self.tokenizer.pad(input_features, return_tensors="pt")
+            input_ids_batch = self.tokenizer.pad(
+                input_features, 
+                return_tensors="pt",
+                # padding_value=-100,
+                max_length=self.max_length,
+                padding="max_length",
+            )
+            batch_input_ids = input_ids_batch["input_ids"]
+            # batch_input_ids = labels_batch["input_ids"].masked_fill(input_ids_batch.attention_mask.ne(1), -100)
+            # if (batch_input_ids[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
+            #     batch_input_ids = batch_input_ids[:, 1:]
+            batch_input_ids = batch_input_ids.masked_fill(input_ids_batch.attention_mask.ne(1), -100)
+        else:
+            batch_input_ids = torch.empty(batch_size, 0, dtype=torch.long)
+
+        logging.info(f"batch_input_ids: {batch_input_ids.shape}, {batch_input_ids.dtype}, {batch_input_ids}")
+        
+        # Create final batch - use different key name for audio to match model expectations
+        batch = {
+            "input_features": batch_audio,  # Model expects audio_waveform parameter
+            "decoder_input_ids": batch_input_ids,
+            "labels": batch_labels,
+        }
+        
+        # if self.return_attention_mask:
+        #     batch["attention_mask"] = batch_attention_mask
+            
+        return batch
+
+model:
+
+class SteerMoEEfficientLayerWiseModel(nn.Module):
+    """
+    Efficient layer-wise steering model using a single router.
+    This approach uses one router to assign weights to steering vectors for all layers,
+    making it much more parameter-efficient than the multiple router approach.
+    """
+    def __init__(self, whisper_encoder, llm_decoder, num_experts=8, 
+                 prompt_proj=None, max_prompt_tokens=None, use_adapter=True):
+        super().__init__()
+        
+        # Create efficient layer-wise steering Whisper encoder
+        
+        # self.whisper_encoder = EfficientLayerWiseSteeringWhisperEncoder(
+        #     whisper_encoder_path, num_experts=num_experts
+        # )
+
+        self.whisper_encoder=whisper_encoder
+        self.llm_decoder = llm_decoder          # frozen
+        logging.debug(f"llm_decoder: {self.llm_decoder}")
+        self.use_adapter = use_adapter
+        self.max_prompt_tokens = max_prompt_tokens
+
+        # Freeze decoder
+        for p in self.llm_decoder.parameters():
+            p.requires_grad = False
+
+        # Optional projection layer if encoder and decoder dimensions don't match
+        if prompt_proj is None and use_adapter:
+            # Get dimensions from encoder output and decoder input
+            encoder_output_dim = self.whisper_encoder.feature_dim
+            # Try to get decoder input dimension
+            if hasattr(llm_decoder, 'config'):
+                decoder_input_dim = getattr(llm_decoder.config, 'n_embd', 
+                                          getattr(llm_decoder.config, 'hidden_size', encoder_output_dim))
+            else:
+                decoder_input_dim = encoder_output_dim
+
+
+            logging.info(f"decoder_input_dim: {decoder_input_dim}, encoder_output_dim: {encoder_output_dim}")
+            
+            if encoder_output_dim != decoder_input_dim:
+                self.prompt_proj = nn.Linear(encoder_output_dim, decoder_input_dim)
+            else:
+                self.prompt_proj = None
+        else:
+            self.prompt_proj = prompt_proj
+
+
+    def forward(self, audio_waveform=None, input_features=None, decoder_input_ids=None, labels=None, 
+                prompt_tokens_only=False, return_gating=False):
+        """
+        Forward pass for efficient layer-wise steering model.
+        
+        Args:
+            audio_waveform: Raw audio waveform input OR preprocessed audio features
+            input_features: Alternative preprocessed audio input (for compatibility)
+            decoder_input_ids: Text token IDs 
+            labels: Target labels for training 
+            prompt_tokens_only: If True, only return prompt embeddings without text
+            return_gating: If True, return gating scores for analysis
+        
+        Returns:
+            Model output with loss if labels provided, or logits/embeddings
+        """
+        # Handle both input parameter names for compatibility
+        audio_input = audio_waveform if audio_waveform is not None else input_features
+        if audio_input is None:
+            raise ValueError("Either audio_waveform or input_features must be provided")
+        
+        # 1. Process audio input - the input from data collator is already preprocessed Whisper features
+        # The preprocessing pipeline already called tokenize_waveform, so we have processed features
+        # We should apply steering to these features, not call tokenize_waveform again
+        if return_gating:
+            # Apply layer-wise steering to the preprocessed features
+            h_audio, gating_scores = self.whisper_encoder._forward_with_steering(audio_input, return_gating=True)
+            logging.debug(f"gating_scores: {gating_scores.shape}, {gating_scores.dtype}, {gating_scores}")
+        else:
+            # Apply layer-wise steering to the preprocessed features  
+            h_audio = self.whisper_encoder._forward_with_steering(audio_input, return_gating=False)
+            gating_scores = None
+
+        logging.debug(f"h_audio: {h_audio.shape}, {h_audio.dtype}, {h_audio}")
+        
+        # h_audio: (batch, audio_seq_len, feature_dim)
+
+        # 2. Project to decoder dimension if needed
+        if self.use_adapter and self.prompt_proj is not None:
+            audio_prompts = self.prompt_proj(h_audio)
+        else:
+            audio_prompts = h_audio
+        # audio_prompts: (batch, audio_seq_len, decoder_dim)
+
+        # 3. Limit prompt length if specified
+        if self.max_prompt_tokens is not None:
+            audio_prompts = audio_prompts[:, :self.max_prompt_tokens, :]
+            
+        logging.info(f"h_audio: {h_audio.shape}, {h_audio.dtype}, {h_audio}")
+
+        # 4. Handle pure audio generation case
+        if decoder_input_ids is None:
+            if prompt_tokens_only:
+                if return_gating:
+                    return audio_prompts, gating_scores
+                else:
+                    return audio_prompts
+            else:
+                # For generation without text input
+                if return_gating:
+                    return audio_prompts, gating_scores
+                else:
+                    return audio_prompts
+
+        logging.info(f"decoder_input_ids: {decoder_input_ids.shape}, {decoder_input_ids.dtype}, {decoder_input_ids}")
+        # 5. Get text embeddings from decoder
+        if hasattr(self.llm_decoder, 'model') and hasattr(self.llm_decoder.model, 'embed_tokens'):
+            # LLaMA-like decoder (Qwen, LLaMA, etc.)
+            text_embeds = self.llm_decoder.model.embed_tokens(decoder_input_ids)
+        elif hasattr(self.llm_decoder, 'transformer') and hasattr(self.llm_decoder.transformer, 'wte'):
+            # GPT-2 like decoder
+            text_embeds = self.llm_decoder.transformer.wte(decoder_input_ids)
+        elif hasattr(self.llm_decoder, 'get_input_embeddings'):
+            # Generic approach
+            text_embeds = self.llm_decoder.get_input_embeddings()(decoder_input_ids)
+        else:
+            raise ValueError("Could not find embedding method for decoder. Please adapt for your LLM.")
+
+
+        logging.info(f"text_embeds: {text_embeds.shape}, {text_embeds.dtype}, {text_embeds}")
+        # 6. Concatenate audio prompts with text embeddings
+        # inputs_embeds: Format: [audio_prompts, text_embeds] = [audio_prompts, text_prompts, labels]
+        inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)
+        # inputs_embeds: (batch, audio_seq_len + text_seq_len, decoder_dim)
+        logging.debug(f"inputs_embeds: {inputs_embeds.shape}, {inputs_embeds.dtype}, {inputs_embeds}")
+
+        logging.debug(f"labels: {labels.shape}, {labels.dtype}, {labels}")
+
+        # 7. Handle labels for training
+        # labels: Format:  [len(audio_prompts)*-100, len(text_prompts)*-100, labels]
+        if labels is not None:
+            audio_prompt_len = audio_prompts.size(1)
+            
+            # Create attention mask for the combined sequence
+            # We want to attend to both audio prompts and text, but only compute loss on text
+            batch_size, total_seq_len = inputs_embeds.shape[:2]
+            attention_mask = torch.ones(batch_size, total_seq_len, device=inputs_embeds.device, dtype=torch.long)
+            
+            # Mask audio prompt tokens with -100 (ignored in loss computation)
+            # The labels should correspond only to the text portion
+            if labels.size(1) != text_embeds.size(1):
+                # If labels length doesn't match text length, truncate or pad
+                if labels.size(1) > text_embeds.size(1):
+                    labels = labels[:, :text_embeds.size(1)]
+                else:
+                    # Pad with -100
+                    pad_length = text_embeds.size(1) - labels.size(1)
+                    labels = torch.cat([
+                        labels,
+                        labels.new_full((labels.size(0), pad_length), -100)
+                    ], dim=1)
+            
+            # Prepend -100 tokens for audio prompts (these will be ignored in loss)
+            full_labels = torch.cat([
+                labels.new_full((labels.size(0), audio_prompt_len), -100),
+                labels
+            ], dim=1)
+            
+            # Pass to decoder with masked labels
+            output = self.llm_decoder(
+                inputs_embeds=inputs_embeds,
+                attention_mask=attention_mask,
+                labels=full_labels
+            )
+        else:
+            # No labels - inference mode
+            output = self.llm_decoder(
+                inputs_ids=inputs_embeds
+            )
+
+        # 8. Return output with gating scores if requested
+        if return_gating:
+            if hasattr(output, 'loss'):
+                # Training mode - return loss and gating scores
+                return {
+                    'loss': output.loss,
+                    'logits': output.logits,
+                    'gating_scores': gating_scores
+                }
+            else:
+                # Inference mode
+                return output, gating_scores
+        else:
+            return output
+
+    def get_steering_analysis(self, gating_scores):
+        """
+        Analyze steering patterns across layers.
+        
+        Args:
+            gating_scores: Gating scores from forward pass
+            
+        Returns:
+            Dictionary with steering analysis
+        """
+        return self.whisper_encoder.get_steering_analysis(gating_scores)
+
+encoder:
+
+class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
+    """
+    Efficient layer-wise steering implementation using a single router.
+    This approach uses one router to assign weights to steering vectors for all layers.
+    """
+    def __init__(self, original_whisper_encoder, num_experts: int = 8, steering_scale: float = 0.1):
+        super().__init__()
+        self.original_encoder = original_whisper_encoder
+        self.num_experts = num_experts
+        self.steering_scale = steering_scale
+        logging.debug(f"original_whisper_encoder: {original_whisper_encoder}")
+        logging.debug(f"self.original_encoder: {self.original_encoder}")
+        logging.debug(f"Has speech_encoder attribute: {hasattr(original_whisper_encoder, 'speech_encoder')}")
+        logging.debug(f"Has _modules attribute: {hasattr(original_whisper_encoder, '_modules')}")
+        if hasattr(original_whisper_encoder, '_modules'):
+            logging.debug(f"Available modules: {list(original_whisper_encoder._modules.keys())}")
+        
+        # Get the number of layers from the speech encoder
+        self.num_layers = _get_num_layers(original_whisper_encoder)
+        
+        # Get the feature dimension from the original encoder
+        if hasattr(original_whisper_encoder, 'config'):
+            self.feature_dim = original_whisper_encoder.config.d_model
+        else:
+            # Default to 1280 for Whisper large
+            self.feature_dim = 1280
+        
+        # Steering vectors for each layer
+        # Shape: (num_layers, num_experts, feature_dim)
+        self.steering_vectors = nn.Parameter(
+            torch.randn(self.num_layers, num_experts, self.feature_dim) * 0.01
+        )
+        
+        # SINGLE router for all layers
+        # Output: (batch, seq_len, num_experts * num_layers)
+        self.router = nn.Linear(self.feature_dim, num_experts * self.num_layers)
+        
+        # Layer-specific scaling factors
+        self.layer_scales = nn.Parameter(torch.ones(self.num_layers) * steering_scale)
+        
+        # Freeze the original encoder
+        for param in self.original_encoder.parameters():
+            param.requires_grad = False
+            
+    def forward(self, mel_spec, return_gating=False):
+        """
+        Forward pass with efficient layer-wise steering.
+        
+        Args:
+            mel_spec: Mel spectrogram input
+            return_gating: Whether to return gating scores for analysis
+            
+        Returns:
+            Steered encoder output
+        """
+        # Store gating scores for analysis
+        gating_scores_list = []
+        
+        # Get the encoder layers
+        encoder_layers = _get_layers(self.original_encoder)
+        
+        # Process through each layer with steering
+        x = mel_spec
+        for layer_idx, layer in enumerate(encoder_layers):
+            # 1. Apply original layer
+            layer_output = layer(x)
+            
+            # 2. Compute steering for this layer using the single router
+            # Get the router output for this specific layer
+            router_output = self.router(layer_output)  # (batch, seq_len, num_experts * num_layers)
+            
+            # Extract gating scores for this layer
+            start_idx = layer_idx * self.num_experts
+            end_idx = (layer_idx + 1) * self.num_experts
+            layer_gating_logits = router_output[:, :, start_idx:end_idx]  # (batch, seq_len, num_experts)
+            
+            # Apply softmax to get gating scores
+            gating_scores = F.softmax(layer_gating_logits, dim=-1)
+            
+            # 3. Get steering vectors for this layer
+            steering_vectors = self.steering_vectors[layer_idx]  # (num_experts, feature_dim)
+            layer_scale = self.layer_scales[layer_idx]
+            
+            # 4. Compute steering adjustment
+            # (batch, seq_len, num_experts) @ (num_experts, feature_dim) -> (batch, seq_len, feature_dim)
+            steering_adjustment = torch.einsum('bte,ef->btf', gating_scores, steering_vectors)
+            
+            # 5. Apply steering with layer-specific scaling
+            steered_output = layer_output + layer_scale * steering_adjustment
+            
+            # Store gating scores for analysis
+            gating_scores_list.append(gating_scores)
+            
+            # Update x for next layer
+            x = steered_output
+
+        logging.debug(f"x: {x.shape}, {x.dtype}, {x}")
+        
+        # Apply final layer norm if exists
+        if hasattr(self.original_encoder, 'speech_encoder') and hasattr(self.original_encoder.speech_encoder, 'layer_norm'):
+            final_output = self.original_encoder.speech_encoder.layer_norm(x)
+            logging.debug(f"speech_encoder final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
+        elif hasattr(self.original_encoder, '_modules') and 'speech_encoder' in self.original_encoder._modules and hasattr(self.original_encoder._modules['speech_encoder'], 'layer_norm'):
+            final_output = self.original_encoder._modules['speech_encoder'].layer_norm(x)
+            logging.debug(f"_modules final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
+        elif hasattr(self.original_encoder, 'layer_norm'):
+            final_output = self.original_encoder.layer_norm(x)
+            logging.debug(f"layer_norm final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
+        else:
+            final_output = x
+            logging.debug(f"x final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
+            
+        if return_gating:
+            return final_output, gating_scores_list
+        return final_output
+    
+    def tokenize_waveform(self, audio, return_gating=False):
+        """
+        Tokenize waveform with efficient layer-wise steering.
+        This method integrates with the original WhisperEncoder.tokenize_waveform 
+        but applies steering during the encoding process.
+        
+        Args:
+            audio: Audio waveform tensor or preprocessed features
+            return_gating: Whether to return gating scores for analysis
+            
+        Returns:
+            Steered audio features, optionally with gating scores
+        """
+        # In the training pipeline, input is always preprocessed features
+        # For raw waveform processing (inference), we keep the original logic
+        if (audio.dim() == 3 and audio.size(-1) == 1280) or (audio.dim() == 2 and audio.size(-1) == 1280):
+            # Input is already preprocessed Whisper features - apply steering directly
+            mel_features = audio
+        else:
+            # Raw waveform - process through original encoder first
+            if hasattr(self.original_encoder, 'tokenize_waveform'):
+                mel_features = self.original_encoder.tokenize_waveform(audio)
+            else:
+                # Fallback: assume audio is already processed mel spectrogram
+                mel_features = audio
+        
+        # Now apply our layer-wise steering to the mel features
+        # We need to process through the speech encoder with steering
+        if hasattr(self.original_encoder, 'speech_encoder'):
+            # Process mel features through our steered encoder layers
+            steered_features = self._forward_with_steering(mel_features, return_gating)
+        else:
+            # Fallback to direct forward
+            steered_features = self.forward(mel_features, return_gating)
+            
+        return steered_features
+    
+    def _forward_with_steering(self, mel_features, return_gating=False):
+        """
+        Forward pass through the speech encoder with steering applied.
+        
+        Args:
+            mel_features: Mel spectrogram features from original encoder
+            return_gating: Whether to return gating scores
+            
+        Returns"""  """:
+            Steered features with optional gating scores
+        """
+        # Get the speech encoder
+        if hasattr(self.original_encoder, 'speech_encoder'):
+            speech_encoder = self.original_encoder.speech_encoder
+        else:
+            speech_encoder = self.original_encoder
+            
+        # Apply initial processing (conv layers, positional embedding, etc.)
+        x = mel_features
+        logging.debug(f"original x: {x.shape}, {x.dtype}, {x}")
+
+        # x=self.original_encoder._mask_input_features
+        
+        # If the speech encoder has conv layers and embeddings, apply them first
+        if hasattr(speech_encoder, 'conv1'):
+            # x = torch.nn.functional.gelu(speech_encoder.conv1(x.transpose(1, 2)))
+            x = torch.nn.functional.gelu(speech_encoder.conv1(x))
+            x = torch.nn.functional.gelu(speech_encoder.conv2(x))
+            # x = x.transpose(1, 2)
+            x=x.permute(0, 2, 1)
+        else:
+            logging.error(f"no conv1 layer found")
+
+        logging.debug(f"conv1+conv2 x: {x.shape}, {x.dtype}, {x}")
+            
+        if hasattr(speech_encoder, 'embed_positions'):
+            positions = speech_encoder.embed_positions.weight[:x.size(1)]
+            x = (x + positions) * speech_encoder.embed_scale
+        else:
+            logging.error(f"no embed_positions layer found")
+
+        logging.debug(f"embed_positions x: {x.shape}, {x.dtype}, {x}")
+            
+        # Apply dropout if present
+        if hasattr(speech_encoder, 'dropout'):
+            x = nn.functional.dropout(x, p=speech_encoder.dropout, training=speech_encoder.training)
+        else:
+            logging.error(f"no dropout layer found")
+        
+        # Now process through layers with steering
+        gating_scores_list = []
+        
+        # Get the encoder layers
+        if hasattr(speech_encoder, 'layers'):
+            encoder_layers = speech_encoder.layers
+        else:
+            logging.error(f"no attention layers found")
+            encoder_layers = []
+            
+        for layer_idx, layer in enumerate(encoder_layers):
+            if layer_idx >= self.num_layers:
+                # More layers than we have steering for, process normally
+                x = layer(x)
+                continue
+                
+            # Apply original layer
+            layer_output = layer(x)[0]
+            
+            # Compute steering for this layer using the single router
+            router_output = self.router(layer_output)  # (batch, seq_len, num_experts * num_layers)
+            
+            # Extract gating scores for this layer
+            start_idx = layer_idx * self.num_experts
+            end_idx = (layer_idx + 1) * self.num_experts
+            layer_gating_logits = router_output[:, :, start_idx:end_idx]  # (batch, seq_len, num_experts)
+            
+            # Apply softmax to get gating scores
+            gating_scores = F.softmax(layer_gating_logits, dim=-1)
+            
+            # Get steering vectors for this layer
+            steering_vectors = self.steering_vectors[layer_idx]  # (num_experts, feature_dim)
+            layer_scale = self.layer_scales[layer_idx]
+            
+            # Compute steering adjustment
+            steering_adjustment = torch.einsum('bte,ef->btf', gating_scores, steering_vectors)
+            
+            # Apply steering with layer-specific scaling
+            x = layer_output + layer_scale * steering_adjustment
+            
+            # Store gating scores for analysis
+            gating_scores_list.append(gating_scores)
+
+        logging.debug(f"layers x: {x.shape}, {x.dtype}, {x}")
+        
+        # Apply final layer norm if exists
+        if hasattr(speech_encoder, 'layer_norm'):
+            x = speech_encoder.layer_norm(x)
+        else:
+            logging.error(f"no layer_norm layers found")
+
+        logging.debug(f"layer_norm x: {x.shape}, {x.dtype}, {x}")
+            
+        if return_gating:
+            return x, gating_scores_list
+        return x
+    
+    def get_steering_analysis(self, gating_scores_list):
+        """
+        Analyze steering patterns across layers.
+        
+        Args:
+            gating_scores_list: List of gating scores from forward pass
+            
+        Returns:
+            Dictionary with steering analysis
+        """
+        analysis = {
+            'layer_usage': [],
+            'expert_diversity': [],
+            'steering_strength': [],
+            'layer_scale_values': self.layer_scales.detach().cpu().numpy().tolist()
+        }
+        
+        for layer_idx, gating_scores in enumerate(gating_scores_list):
+            # Average gating scores across batch and sequence
+            avg_gating = gating_scores.mean(dim=(0, 1))  # (num_experts,)
+            
+            # Which experts are most used
+            top_experts = torch.topk(avg_gating, k=3, dim=-1)
+            
+            # Diversity measure (entropy of gating distribution)
+            entropy = -torch.sum(avg_gating * torch.log(avg_gating + 1e-8))
+            
+            analysis['layer_usage'].append({
+                'layer': layer_idx,
+                'top_experts': top_experts.indices.tolist(),
+                'top_scores': top_experts.values.tolist(),
+                'entropy': entropy.item()
+            })
+            
+            analysis['expert_diversity'].append(entropy.item())
+            analysis['steering_strength'].append(avg_gating.max().item())
+        
+        return analysis
+
+training script:
+
+def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
+                             deepspeed_config_path: str = 'configs/stage2_simple.json',
+                             eval_dataset_name: Optional[str] = None,
+                             custom_test_set_path: Optional[str] = None,
+                             resume_from_checkpoint: Optional[str] = None):
+    """
+    Train SteerMoE model with layer-wise steering.
+    
+    Args:
+        config_path: Path to configuration file
+        deepspeed_config_path: Path to DeepSpeed configuration
+        eval_dataset_name: Name of evaluation dataset
+        custom_test_set_path: Path to custom test set
+        resume_from_checkpoint: Path to checkpoint to resume from
+    """
+    # Load configuration
+    config = load_config(config_path)
+
+    # Load models
+    print("Loading Whisper encoder...")
+    whisper_encoder = WhisperEncoder(config['whisper_encoder']['model_path'])
+
+    print("Loading LLM decoder...")
+    llm_decoder = AutoModelForCausalLM.from_pretrained(config['llm_decoder']['model_name'])
+    llm_decoder.eval()
+    for p in llm_decoder.parameters():
+        p.requires_grad = False
+
+    print("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])
+    feature_extractor = WhisperFeatureExtractor.from_pretrained(config['whisper_encoder']['model_path'])
+    
+    # Add padding token if not present
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+
+    # Create layer-wise steering Whisper encoder
+    print("Creating layer-wise steering Whisper encoder...")
+    layer_wise_whisper = EfficientLayerWiseSteeringWhisperEncoder(
+        original_whisper_encoder=whisper_encoder,
+        num_experts=config['steering']['num_experts'],
+        steering_scale=config['steering']['steering_scale']
+    )
+    logging.info(f"layer_wise_whisper.original_encoder: {layer_wise_whisper.original_encoder}")
+
+    # Create main model
+    print("Creating SteerMoE model...")
+    model = SteerMoEEfficientLayerWiseModel(
+        whisper_encoder=layer_wise_whisper,
+        llm_decoder=llm_decoder,
+        num_experts=config['steering']['num_experts'],
+        max_prompt_tokens=config.get('max_prompt_tokens', 2048),
+        use_adapter=config.get('use_adapter', True)
+    )
+
+    logging.info(f"model.whisper_encoder.original_encoder: {model.whisper_encoder.original_encoder}")
+
+    # Set model to training mode
+    model.train()
+
+    # Load dataset
+    print("Loading dataset...")
+    parquet_dirs = config.get('parquet_dirs', [])
+    batch_size = config['training']['batch_size']
+    logging.info(f"batch_size: {batch_size}")
+
+    # Expand parquet directories if they contain subdirectories
+    expanded_dirs = []
+    for parquet_dir in parquet_dirs:
+        if os.path.isdir(parquet_dir):
+            subdirs = [os.path.join(parquet_dir, d) for d in os.listdir(parquet_dir) 
+                      if os.path.isdir(os.path.join(parquet_dir, d))]
+            if subdirs:
+                expanded_dirs.extend(subdirs)
+            else:
+                expanded_dirs.append(parquet_dir)
+        else:
+            expanded_dirs.append(parquet_dir)
+
+    dataset = load_parquet_datasets_for_steermoe(expanded_dirs)
+    print(f"Dataset: {type(dataset)} {dataset}")
+
+    # Filter dataset if needed
+    # if config.get('filter_dataset', True):
+    #     dataset = filter_dataset_by_length(
+    #         dataset,
+    #         max_audio_length=config.get('max_audio_length', 30.0),
+    #         max_text_length=config.get('max_text_length', 448)
+    #     )
+
+    # Dataset is already preprocessed with input_features and labels
+    # No need for additional preparation
+    processed_dataset = dataset['train']
+
+    # Create validation split
+    if 'validation' in dataset:
+        processed_val = dataset['validation']
+    else:
+        # Split train into train/val
+        split_dataset = processed_dataset.train_test_split(test_size=0.05, seed=42)
+        processed_val = split_dataset['test']
+        processed_dataset = split_dataset['train']
+
+    # Create data collator for preprocessed data
+    textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")  # Default Chinese prompt
+    max_length = config.get('max_text_length', 1024)
+    
+    # Create data collator with fixed max length for consistent evaluation
+    data_collator = DataCollatorSpeechSeqSeqWithPadding(
+        feature_extractor=feature_extractor,
+        tokenizer=tokenizer,
+        textual_prompt=textual_prompt,
+        max_length=max_length,  # Fixed max length
+        audio_column="input_features",  # Use preprocessed audio features
+        text_column="labels"  # Use preprocessed labels
+    )
+
+    # Create custom compute metrics function
+    def compute_metrics_trainer(eval_pred):
+        logging.info(f"start evaluation: eval_pred: {eval_pred}")
+
+        try:
+            logits, labels = eval_pred
+            preds = logits.argmax(-1)
+        
+            # Decode predictions and labels
+            pred_str = []
+            label_str = []
+        
+            for pred_seq, label_seq in zip(preds, labels):
+                # Remove padding and special tokens from predictions
+                if hasattr(pred_seq, '__len__'):
+                    pred_tokens = pred_seq[pred_seq != tokenizer.pad_token_id]
+                    pred_text = tokenizer.decode(pred_tokens, skip_special_tokens=True)
+                    pred_str.append(pred_text)
+
+                # Remove -100 tokens from labels
+                if hasattr(label_seq, '__len__'):
+                    label_tokens = label_seq[label_seq != -100]
+                    label_text = tokenizer.decode(label_tokens, skip_special_tokens=True)
+                    label_str.append(label_text)
+        
+            if len(pred_str) > 0 and len(label_str) > 0:
+                try:
+                    cer_metric = load_metric('cer')
+                    wer_metric = load_metric('wer')
+                    cer = cer_metric.compute(predictions=pred_str, references=label_str)
+                    wer = wer_metric.compute(predictions=pred_str, references=label_str)
+                    return {"cer": cer, "wer": wer}
+                except Exception as e:
+                    logging.warning(f"Metrics computation failed: {e}")
+                    return {"cer": 1.0, "wer": 1.0}  # Return default values
+            else:
+                return {"cer": 1.0, "wer": 1.0}  # Return default values
+                
+        except Exception as e:
+            logging.error(f"Evaluation error: {e}")
+            return {"cer": 1.0, "wer": 1.0}  # Return default values
+        # cer_metric = load_metric('cer')
+        # wer_metric = load_metric('wer')
+        # cer = cer_metric.compute(predictions=pred_str, references=label_str)
+        # wer = wer_metric.compute(predictions=pred_str, references=label_str)
+        # logging.info(f"end evaluation: pred_str: {pred_str}, ref_str: {label_str}, cer: {cer}, wer: {wer}")
+        # return {"cer": cer, "wer": wer}
+
+    # Training arguments
+    training_args = TrainingArguments(
+        output_dir=config['training']['output_dir'],
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size,
+        num_train_epochs=config['training']['epochs'],
+        evaluation_strategy="steps",  # Re-enable evaluation with fix
+        save_strategy="steps",
+        logging_dir=config['training']['logging_dir'],
+        deepspeed=deepspeed_config_path if config.get('use_deepspeed', False) else None,
+        fp16=config.get('fp16', True),
+        report_to=["none"],
+        load_best_model_at_end=True,
+        metric_for_best_model="cer",
+        greater_is_better=False,
+        save_total_limit=config.get('save_total_limit', 2),
+        resume_from_checkpoint=resume_from_checkpoint,
+        warmup_steps=config.get('warmup_steps', 0),
+        weight_decay=config.get('weight_decay', 0.01),
+        logging_steps=config.get('logging_steps', 10),
+        # eval_steps=config.get('eval_steps', 500),
+        eval_steps=config.get('eval_steps', 50),
+        save_steps=config.get('save_steps', 1000),
+        dataloader_drop_last=True,  # Ensure consistent batch sizes
+        remove_unused_columns=False,  # Keep all columns for our custom data collator
+        # gradient_checkpointing=True,  # Enable gradient checkpointing for memory efficiency
+        dataloader_num_workers=4,  # Add parallel data loading
+        dataloader_pin_memory=True,  # Pin memory for faster GPU transfer
+        eval_accumulation_steps=1,  # Process evaluation batches immediately to avoid memory issues
+    )
+
+    # Create callbacks
+    callbacks = []
+
+    # Add steering analysis callback
+    if config.get('log_steering_analysis', True):
+        steering_callback = SteeringAnalysisCallback(model, log_interval=config.get('steering_log_interval', 100))
+        callbacks.append(steering_callback)
+
+    # Add gradient clipping callback
+    if config.get('clip_steering_gradients', True):
+        gradient_callback = GradientClippingCallback(max_norm=config.get('steering_gradient_clip', 1.0))
+        callbacks.append(gradient_callback)
+
+    # Add early stopping
+    if config.get('use_early_stopping', True):
+        early_stopping = EarlyStoppingCallback(early_stopping_patience=config.get('early_stopping_patience', 3))
+        callbacks.append(early_stopping)
+
+    # Create trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=processed_dataset,
+        eval_dataset=processed_val,
+        data_collator=data_collator,
+        compute_metrics=compute_metrics_trainer,
+        callbacks=callbacks,
+    )
+
+    # Start training
+    print("Starting training...")
+    trainer.train()
+
+    # Save final model
+    final_output_dir = os.path.join(config['training']['output_dir'], 'final')
+    trainer.save_model(final_output_dir)
+    tokenizer.save_pretrained(final_output_dir)
+
+    print(f"Training completed. Model saved to {final_output_dir}")
+
+    return trainer, model
+
+i change the padding method in the datacollator from `input_ids_batch = self.tokenizer.pad(input_features, return_tensors="pt")` to `            input_ids_batch = self.tokenizer.pad(
+                input_features, 
+                return_tensors="pt",
+                # padding_value=-100,
+                max_length=self.max_length,
+                padding="max_length",
+            )` and now i got these error messages.before this modification, i could run the training without any error, but got dim mismatch problem in evalution that happened after every epoch defined in the TrainingArgument. please analyse the reason of current error messages, fix it and explain very carefully

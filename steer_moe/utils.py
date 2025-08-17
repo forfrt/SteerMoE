@@ -13,7 +13,7 @@ import logging
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(filename)s>%(funcName)s>%(lineno)d - %(message)s')
+    format='%(asctime)s - %(levelname)s - %(filename)s>%(funcName)s:%(lineno)d - %(message)s')
 
 def load_balancing_loss(gating_scores):
     """
@@ -142,7 +142,7 @@ class DataCollatorSpeechSeqSeqWithPadding:
     feature_extractor: Any
     tokenizer: Any
     textual_prompt: Optional[str] = None
-    max_length: int = 2048
+    max_length: int = 1024
     audio_column: str = "input_features"  # Preprocessed audio features
     text_column: str = "labels"  # Preprocessed tokenized labels
     return_attention_mask: bool = False
@@ -183,6 +183,12 @@ class DataCollatorSpeechSeqSeqWithPadding:
         # Handle preprocessed labels (already tokenized)
         labels = []
         decoder_input_ids = []
+
+        # Get the EOS token ID once
+        eos_token_id = self.tokenizer.eos_token_id
+        if eos_token_id is None:
+            raise ValueError("Tokenizer must have an EOS token ID.")
+        eos_tensor = torch.tensor([eos_token_id], dtype=torch.long)
         
         for feature in features:
             if self.text_column in feature:
@@ -205,6 +211,8 @@ class DataCollatorSpeechSeqSeqWithPadding:
                 else:
                     clean_labels = torch.tensor(label_ids, dtype=torch.long)
 
+                clean_labels_with_eos = torch.cat([clean_labels, eos_tensor])
+
                 logging.debug(f"clean_labels: {clean_labels.shape}, {clean_labels.dtype}, {clean_labels}")
                 
                 # Create decoder input with optional textual prompt
@@ -219,18 +227,26 @@ class DataCollatorSpeechSeqSeqWithPadding:
                     logging.debug(f"prompt_tokens: {prompt_tokens.shape}, {prompt_tokens.dtype}, {prompt_tokens}")
                     
                     # Combine prompt + clean labels for decoder input
-                    decoder_input = torch.cat([prompt_tokens, clean_labels])
-                    # decoder_input = prompt_tokens 
-                    
+
+                    decoder_input = torch.cat([prompt_tokens, clean_labels_with_eos])
+                    empty_prompt = torch.full_like(prompt_tokens, fill_value=-100)
+                    label = torch.cat([empty_prompt, clean_labels_with_eos])
+
+                    # decoder_input = torch.cat([prompt_tokens, clean_labels])
                     # Labels should be the original clean labels only (prompt gets masked in model)
-                    empty_prompt=torch.full_like(prompt_tokens, fill_value=-100)
-                    label=torch.cat([empty_prompt, clean_labels])
+                    # empty_prompt=torch.full_like(prompt_tokens, fill_value=-100)
+                    # label=torch.cat([empty_prompt, clean_labels])
 
                     # label = clean_labels.clone()
                 else:
                     # No prompt, use clean labels directly
-                    decoder_input = clean_labels.clone()
-                    label = clean_labels.clone()
+                    decoder_input = clean_labels_with_eos.clone()
+                    label = clean_labels_with_eos.clone()
+
+                if decoder_input.numel() > 0 and decoder_input.size(0) > self.max_length:
+                    decoder_input = decoder_input[: self.max_length]
+                if label.numel() > 0 and label.size(0) > self.max_length:
+                    label = label[: self.max_length]
                 
                 logging.debug(f"decoder_input: {decoder_input.shape}, {decoder_input.dtype}, {decoder_input}")
                 logging.debug(f"label: {label.shape}, {label.dtype}, {label}")
@@ -241,6 +257,8 @@ class DataCollatorSpeechSeqSeqWithPadding:
                 decoder_input_ids.append(torch.tensor([], dtype=torch.long))
                 labels.append(torch.tensor([], dtype=torch.long))
 
+        logging.debug(f"label: {[len(label) for label in labels]}")
+        logging.debug(f"decoder_input_ids: {[len(decoder_input_id) for decoder_input_id in decoder_input_ids]}")
         # Pad lables 
         label_features=[{"input_ids": input_ids} for input_ids in labels]
         if label_features:
@@ -251,18 +269,20 @@ class DataCollatorSpeechSeqSeqWithPadding:
                 # padding_value=-100,
                 max_length=self.max_length,
                 padding="max_length",
-                truncation=True
+                # truncation=True,
             )
+            logging.debug(f"labels_batch: {labels_batch}")
+            logging.debug(f"labels_batch['input_ids']: {labels_batch['input_ids'].shape}, {labels_batch['input_ids'].dtype}, {labels_batch['input_ids']}")
+            logging.debug(f"labels_batch['attention_mask']: {labels_batch['attention_mask'].shape}, {labels_batch['attention_mask'].dtype}, {labels_batch['attention_mask']}")
 
             batch_labels = labels_batch["input_ids"]
             batch_labels = batch_labels.masked_fill(labels_batch.attention_mask.ne(1), -100)
-            # batch_labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
             # if (batch_labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
             #     batch_labels = batch_labels[:, 1:]
         else:
             batch_labels = torch.empty(batch_size, 0, dtype=torch.long)
 
-        # logging.info(f"batch_labels: {batch_labels.shape}, {batch_labels.dtype}, {batch_labels}")
+        logging.debug(f"batch_labels: {batch_labels.shape}, {batch_labels.dtype}, {batch_labels}")
 
         # Pad prompt_tokens+labels
         input_features=[{"input_ids": input_ids} for input_ids in decoder_input_ids]
@@ -274,17 +294,19 @@ class DataCollatorSpeechSeqSeqWithPadding:
                 # padding_value=-100,
                 max_length=self.max_length,
                 padding="max_length",
-                truncation=True
+                # truncation=True,
             )
+            # logging.debug(f"input_ids_batch: {input_ids_batch}")
+            # logging.debug(f"input_ids_batch['input_ids']: {input_ids_batch['input_ids'].shape}, {input_ids_batch['input_ids'].dtype}, {input_ids_batch['input_ids']}")
+            # logging.debug(f"input_ids_batch['attention_mask']: {input_ids_batch['attention_mask'].shape}, {input_ids_batch['attention_mask'].dtype}, {input_ids_batch['attention_mask']}")
+
             batch_input_ids = input_ids_batch["input_ids"]
-            # batch_input_ids = labels_batch["input_ids"].masked_fill(input_ids_batch.attention_mask.ne(1), -100)
-            # if (batch_input_ids[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
-            #     batch_input_ids = batch_input_ids[:, 1:]
-            batch_input_ids = batch_input_ids.masked_fill(input_ids_batch.attention_mask.ne(1), -100)
+            # do not turn pads into -100, keep pad_token_id; the llm embed cannot understand -100
+            # batch_input_ids = batch_input_ids.masked_fill(input_ids_batch.attention_mask.ne(1), -100)
         else:
             batch_input_ids = torch.empty(batch_size, 0, dtype=torch.long)
 
-        # logging.info(f"batch_input_ids: {batch_input_ids.shape}, {batch_input_ids.dtype}, {batch_input_ids}")
+        logging.debug(f"batch_input_ids: {batch_input_ids.shape}, {batch_input_ids.dtype}, {batch_input_ids}")
         
         # Create final batch - use different key name for audio to match model expectations
         batch = {

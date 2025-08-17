@@ -958,6 +958,7 @@ class WhisperEncoder(WhisperPreTrainedModel):
         self.layerdrop = config.encoder_layerdrop
 
         embed_dim = config.d_model
+        # chnage here to switch whisper v2/3
         self.num_mel_bins = 128
         # self.num_mel_bins = 80
         self.padding_idx = config.pad_token_id

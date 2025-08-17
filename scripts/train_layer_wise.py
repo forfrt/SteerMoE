@@ -7,6 +7,7 @@
 import yaml
 import torch
 import torch.nn as nn
+import torch.distributed as dist
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments, EarlyStoppingCallback, TrainerCallback, WhisperFeatureExtractor
 from datasets import Audio, load_dataset, concatenate_datasets, DatasetDict, load_metric, load_from_disk
@@ -177,6 +178,22 @@ def create_layer_wise_optimizer(model, learning_rate: float = 1e-4,
 
     return torch.optim.AdamW(param_groups)
 
+# in your models.py
+def save_custom(model, path):
+    os.makedirs(path, exist_ok=True)
+    torch.save(model.state_dict(), os.path.join(path, "pytorch_model.bin"))
+
+@staticmethod
+def load_custom(path, whisper_encoder, llm_decoder, **kwargs):
+    model = SteerMoEEfficientLayerWiseModel(
+        whisper_encoder=whisper_encoder,
+        llm_decoder=llm_decoder,
+        **kwargs
+    )
+    sd = torch.load(os.path.join(path, "pytorch_model.bin"), map_location="cpu")
+    model.load_state_dict(sd, strict=True)
+    return model
+
 
 def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
                              deepspeed_config_path: str = 'configs/stage2_simple.json',
@@ -196,9 +213,6 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
     # Load configuration
     config = load_config(config_path)
 
-    # Load models
-    print("Loading Whisper encoder...")
-    whisper_encoder = WhisperEncoder(config['whisper_encoder']['model_path'])
 
     print("Loading LLM decoder...")
     llm_decoder = AutoModelForCausalLM.from_pretrained(config['llm_decoder']['model_name'])
@@ -218,11 +232,10 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
     # Create layer-wise steering Whisper encoder
     print("Creating layer-wise steering Whisper encoder...")
     layer_wise_whisper = EfficientLayerWiseSteeringWhisperEncoder(
-        original_whisper_encoder=whisper_encoder,
+        whisper_encoder_path=config['whisper_encoder']['model_path'],
         num_experts=config['steering']['num_experts'],
         steering_scale=config['steering']['steering_scale']
     )
-    logging.info(f"layer_wise_whisper.original_encoder: {layer_wise_whisper.original_encoder}")
 
     # Create main model
     print("Creating SteerMoE model...")
@@ -230,11 +243,11 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         whisper_encoder=layer_wise_whisper,
         llm_decoder=llm_decoder,
         num_experts=config['steering']['num_experts'],
-        max_prompt_tokens=config.get('max_prompt_tokens', 512),
+        max_prompt_tokens=config.get('max_prompt_tokens', 2048),
         use_adapter=config.get('use_adapter', True)
     )
 
-    logging.info(f"model.whisper_encoder.original_encoder: {model.whisper_encoder.original_encoder}")
+    logging.info(f"model: {model}")
 
     # Set model to training mode
     model.train()
@@ -243,6 +256,7 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
     print("Loading dataset...")
     parquet_dirs = config.get('parquet_dirs', [])
     batch_size = config['training']['batch_size']
+
     logging.info(f"batch_size: {batch_size}")
 
     # Expand parquet directories if they contain subdirectories
@@ -284,7 +298,7 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
 
     # Create data collator for preprocessed data
     textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")  # Default Chinese prompt
-    max_length = config.get('max_text_length', 2048)
+    max_length = config.get('max_text_length', 1024)
     
     # Create data collator with fixed max length for consistent evaluation
     data_collator = DataCollatorSpeechSeqSeqWithPadding(
@@ -348,19 +362,19 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
     training_args = TrainingArguments(
         output_dir=config['training']['output_dir'],
         per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
+        # per_device_eval_batch_size=batch_size,
         num_train_epochs=config['training']['epochs'],
-        evaluation_strategy="steps",  # Re-enable evaluation with fix
+        # evaluation_strategy="steps",
         save_strategy="steps",
         logging_dir=config['training']['logging_dir'],
         deepspeed=deepspeed_config_path if config.get('use_deepspeed', False) else None,
         fp16=config.get('fp16', True),
         report_to=["none"],
-        load_best_model_at_end=True,
-        metric_for_best_model="cer",
-        greater_is_better=False,
+        load_best_model_at_end=False,
+        # load_best_model_at_end=True,
+        # metric_for_best_model="cer",
+        # greater_is_better=False,
         save_total_limit=config.get('save_total_limit', 2),
-        resume_from_checkpoint=resume_from_checkpoint,
         warmup_steps=config.get('warmup_steps', 0),
         weight_decay=config.get('weight_decay', 0.01),
         logging_steps=config.get('logging_steps', 10),
@@ -373,6 +387,7 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         dataloader_num_workers=4,  # Add parallel data loading
         dataloader_pin_memory=True,  # Pin memory for faster GPU transfer
         eval_accumulation_steps=1,  # Process evaluation batches immediately to avoid memory issues
+        save_safetensors=False,
     )
 
     # Create callbacks
@@ -389,29 +404,32 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         callbacks.append(gradient_callback)
 
     # Add early stopping
-    if config.get('use_early_stopping', True):
-        early_stopping = EarlyStoppingCallback(early_stopping_patience=config.get('early_stopping_patience', 3))
-        callbacks.append(early_stopping)
+    # if config.get('use_early_stopping', True):
+    #     early_stopping = EarlyStoppingCallback(early_stopping_patience=config.get('early_stopping_patience', 3))
+    #     callbacks.append(early_stopping)
 
     # Create trainer
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=processed_dataset,
-        eval_dataset=processed_val,
+        # eval_dataset=processed_val,
         data_collator=data_collator,
-        compute_metrics=compute_metrics_trainer,
+        # compute_metrics=compute_metrics_trainer,
         callbacks=callbacks,
     )
 
     # Start training
     print("Starting training...")
-    trainer.train()
+    trainer.train(
+        resume_from_checkpoint=resume_from_checkpoint if resume_from_checkpoint is not None else False,
+    )
 
     # Save final model
     final_output_dir = os.path.join(config['training']['output_dir'], 'final')
     trainer.save_model(final_output_dir)
     tokenizer.save_pretrained(final_output_dir)
+    save_custom(model, final_output_dir)
 
     print(f"Training completed. Model saved to {final_output_dir}")
 
@@ -422,41 +440,211 @@ def evaluate_layer_wise_model(model_path: str, eval_dataset_name: str, config_pa
     """Evaluate a trained layer-wise SteerMoE model."""
     config = load_config(config_path)
 
+    local_rank = int(os.environ['LOCAL_RANK'])
+    device = torch.device("cuda", local_rank)
+    # rank = dist.get_rank()
+
+    logging.info(f"local_rank: {local_rank}, device: {device}")
+
     # Load model
-    model = SteerMoEEfficientLayerWiseModel.from_pretrained(model_path)
+    print("Loading LLM decoder...")
+    llm_decoder = AutoModelForCausalLM.from_pretrained(config['llm_decoder']['model_name'])
+    llm_decoder.eval()
+    for p in llm_decoder.parameters():
+        p.requires_grad = False
+
+    print("Loading tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])
+    feature_extractor = WhisperFeatureExtractor.from_pretrained(config['whisper_encoder']['model_path'])
+
+    # Add padding token if not present
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+
+    # Create layer-wise steering Whisper encoder
+    print("Creating layer-wise steering Whisper encoder...")
+    layer_wise_whisper = EfficientLayerWiseSteeringWhisperEncoder(
+        whisper_encoder_path=config['whisper_encoder']['model_path'],
+        num_experts=config['steering']['num_experts'],
+        steering_scale=config['steering']['steering_scale']
+    )
+
+    print("Creating SteerMoE model...")
+    model = load_custom(
+        model_path, layer_wise_whisper, llm_decoder,
+        num_experts=config['steering']['num_experts'],
+        max_prompt_tokens=config.get('max_prompt_tokens', 2048),
+        use_adapter=config.get('use_adapter', True),
+    )
+
+    # model = SteerMoEEfficientLayerWiseModel(
+    #     whisper_encoder=layer_wise_whisper,
+    #     llm_decoder=llm_decoder,
+    #     num_experts=config['steering']['num_experts'],
+    #     max_prompt_tokens=config.get('max_prompt_tokens', 2048),
+    #     use_adapter=config.get('use_adapter', True),
+    # )
+
+    # # 2. LOAD the saved state dictionary from your checkpoint.
+    # #    map_location='cpu' is important to avoid one process using all GPU memory.
+    # print(f"Loading model state from: {model_path}")
+    # state_dict_path = os.path.join(model_path, "pytorch_model.bin")
+    # state_dict = torch.load(state_dict_path, map_location="cpu")
+    # model.load_state_dict(state_dict)
+
+    model.to(device)
+    model.half()
+    model.eval()
 
     # Load evaluation dataset
-    from steer_moe.utils import get_asr_dataset_by_name
-    eval_dataset = get_asr_dataset_by_name(eval_dataset_name, split='test')
+    print("Loading dataset...")
+    parquet_dirs = config.get('parquet_dirs', [])
+    batch_size = config['training']['batch_size']
 
-    # Prepare dataset
-    whisper_encoder = WhisperEncoder(config['whisper_encoder']['model_path'])
-    processed_eval = prepare_asr_dataset(
-        eval_dataset,
-        config.get('audio_column', 'audio'),
-        config.get('text_column', 'text'),
-        whisper_encoder,
-        tokenizer
+    # Expand parquet directories if they contain subdirectories
+    expanded_dirs = []
+    for parquet_dir in parquet_dirs:
+        if os.path.isdir(parquet_dir):
+            subdirs = [os.path.join(parquet_dir, d) for d in os.listdir(parquet_dir) 
+                      if os.path.isdir(os.path.join(parquet_dir, d))]
+            if subdirs:
+                expanded_dirs.extend(subdirs)
+            else:
+                expanded_dirs.append(parquet_dir)
+        else:
+            expanded_dirs.append(parquet_dir)
+
+    dataset = load_parquet_datasets_for_steermoe(expanded_dirs)
+    print(f"Dataset: {type(dataset)} {dataset}")
+
+    # Dataset is already preprocessed with input_features and labels
+    # No need for additional preparation
+    processed_dataset = dataset['train']
+
+    # Create validation split
+    if 'validation' in dataset:
+        processed_val = dataset['validation']
+    else:
+        # Split train into train/val
+        split_dataset = processed_dataset.train_test_split(test_size=0.05, seed=42)
+        processed_val = split_dataset['test']
+        processed_dataset = split_dataset['train']
+
+    textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")  # Default Chinese prompt
+    max_length = config.get('max_text_length', 1024)
+    
+    # Create data collator with fixed max length for consistent evaluation
+    data_collator = DataCollatorSpeechSeqSeqWithPadding(
+        feature_extractor=feature_extractor,
+        tokenizer=tokenizer,
+        textual_prompt=textual_prompt,
+        max_length=max_length,  # Fixed max length
+        audio_column="input_features",  # Use preprocessed audio features
+        text_column="labels"  # Use preprocessed labels
     )
 
-    # Create trainer for evaluation
-    trainer = Trainer(
-        model=model,
-        args=TrainingArguments(
-            output_dir="./eval_results",
-            per_device_eval_batch_size=config['training']['batch_size'],
-            fp16=config.get('fp16', True),
-        ),
-        eval_dataset=processed_eval,
-        compute_metrics=compute_metrics,
+    # Create a DataLoader for the evaluation set
+    # NOTE: You should set a reasonable batch size here. 1 is safe, but you can try larger.
+    eval_batch_size = config['training'].get('per_device_eval_batch_size', 1) 
+    eval_dataloader = DataLoader(
+        processed_val,
+        batch_size=eval_batch_size,
+        collate_fn=data_collator
     )
 
-    # Evaluate
-    results = trainer.evaluate()
+    all_preds = []
+    all_labels = []
+    device=model.device
+
+    print("Starting manual evaluation loop...")
+    textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")
+    prompt_ids = tokenizer(textual_prompt, return_tensors="pt").input_ids.to(device)
+
+    eos_token_id = tokenizer.eos_token_id
+    if eos_token_id is None:
+        # Fallback for some tokenizers
+        eos_token_id = tokenizer.pad_token_id
+        logging.warning(f"EOS token not found, using PAD token as EOS: {eos_token_id}")
+
+    for step, batch in enumerate(tqdm.tqdm(eval_dataloader)):
+        # Move batch to device
+        batch = {k: v.to(device) for k, v in batch.items()}
+        batch_prompt_ids = prompt_ids.expand(batch["input_features"].shape[0], -1)
+        
+        with torch.no_grad():
+            # Use model.generate() for efficient decoding
+            # You might need to adjust max_length and other generation parameters
+            generated_ids = model.generate(
+                input_features=batch["input_features"],
+                decoder_input_ids=batch_prompt_ids,
+                # should not be the decoder_input_ids as it's used in the autoregressive training and contains the labels
+                # decoder_input_ids=batch["decoder_input_ids"],
+                max_new_tokens=512,  # Adjust as needed
+                eos_token_id=eos_token_id,
+            )
+
+        # Decode predictions
+        decoded_preds = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+        cleaned_preds = []
+        for pred in decoded_preds:
+            # Find the prompt in the prediction and take the text after it
+            if textual_prompt in pred:
+                cleaned_preds.append(pred.split(textual_prompt, 1)[1])
+            else:
+                cleaned_preds.append(pred) # Fallback if prompt is not found
+        # logging.info(f"decoded_preds: {decoded_preds}")
+        logging.info(f"decoded_preds: {cleaned_preds}")
+        
+        # Prepare and decode labels
+        labels = batch["labels"]
+        labels[labels == -100] = tokenizer.pad_token_id # replace -100 with pad_token_id for decoding
+        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        logging.info(f"decoded_labels: {decoded_labels}")
+
+        all_preds.extend(decoded_preds)
+        all_labels.extend(decoded_labels)
+        
+        # Optional: clean up memory
+        del batch, generated_ids, labels
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    # Now compute metrics on all the decoded strings
+    print("Computing final metrics...")
+    cer_metric = load_metric('cer')
+    wer_metric = load_metric('wer')
+    
+    cer = cer_metric.compute(predictions=all_preds, references=all_labels)
+    wer = wer_metric.compute(predictions=all_preds, references=all_labels)
+    
+    results = {"cer": cer, "wer": wer}
     print(f"Evaluation results: {results}")
 
     return results
+
+
+    # # Create trainer for evaluation
+    # trainer = Trainer(
+    #     model=model,
+    #     args=TrainingArguments(
+    #         output_dir="./eval_results",
+    #         per_device_eval_batch_size=1,
+    #         evaluation_strategy="steps",
+    #         deepspeed=deepspeed_config_path if config.get('use_deepspeed', False) else None,
+    #         fp16=config.get('fp16', True),
+    #     ),
+    #     eval_dataset=processed_val,
+    #     compute_metrics=compute_metrics_trainer,
+    #     data_collator=data_collator,
+    # )
+
+    # # Evaluate
+    # print("Starting evaluating...")
+    # results = trainer.evaluate()
+    # print(f"Evaluation results: {results}")
+
+    # return results
 
 
 def analyze_steering_patterns(model_path: str):

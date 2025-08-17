@@ -27,8 +27,8 @@ steering:
 training:
   output_dir: "./results/layer_wise_steermoe"
   logging_dir: "./logs/layer_wise_steermoe"
-  batch_size: 4 
-  epochs: 10
+  batch_size: 8
+  epochs: 16
   learning_rate: 1e-4
   steering_learning_rate: 1e-3
   router_learning_rate: 1e-4
@@ -42,6 +42,15 @@ training:
 parquet_dirs:
   - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_1_nots_processed_in_batch/"
   # - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_2_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_1_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_2_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_3_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_4_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_5_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_6_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_7_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_8_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_9_nots_processed_in_batch/"
 
 audio_column: "audio"
 text_column: "text"
@@ -54,7 +63,7 @@ filter_dataset: true
 textual_prompt: "请转写以下音频内容为文字："  # Chinese prompt for ASR task
 
 # Model Configuration
-max_prompt_tokens: 512
+max_prompt_tokens: 2048
 use_adapter: true
 save_total_limit: 2
 logging_steps: 100  # Reduced from 10 to 100 for less overhead

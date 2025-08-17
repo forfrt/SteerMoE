@@ -894,8 +894,10 @@ accelerate_version	whisper_train/main_word_correct_clips.py	/^    from accelerat
 add_mask	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^def add_mask(sim: Tensor, mask: Tensor) -> Tensor:$/;"	f	typeref:typename:Tensor
 add_optional_chunk_mask	steer_moe/tokenizer/glm4/cosyvoice/utils/mask.py	/^def add_optional_chunk_mask(xs: torch.Tensor,$/;"	f
 add_skip	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^    def add_skip(self, x: Tensor, skip: Tensor) -> Tensor:$/;"	m	class:UpsampleBlock1d	typeref:typename:Tensor
-allgather_bucket_size	configs/stage2.json	/^    "allgather_bucket_size": 2e8,$/;"	n	object:zero_optimization
+allgather_bucket_size	configs/stage2.json	/^    "allgather_bucket_size": 5e8,$/;"	n	object:zero_optimization
+allgather_bucket_size	configs/stage2_simple.json	/^    "allgather_bucket_size": 2e8,$/;"	n	object:zero_optimization
 allgather_partitions	configs/stage2.json	/^    "allgather_partitions": true,$/;"	b	object:zero_optimization
+allgather_partitions	configs/stage2_simple.json	/^    "allgather_partitions": true,$/;"	b	object:zero_optimization
 alpha_sigma_to_t	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/sampling.py	/^def alpha_sigma_to_t(alpha, sigma):$/;"	f
 analyze_layer_wise_vs_post_encoder	steer_moe/layer_wise_whisper.py	/^def analyze_layer_wise_vs_post_encoder():$/;"	f
 analyze_routing_patterns	cross_modal_steer/router_comparison.py	/^def analyze_routing_patterns():$/;"	f
@@ -992,7 +994,8 @@ config_class	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^   
 config_class	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    config_class = WhisperConfig$/;"	v	class:WhisperPreTrainedModel
 configure_optimizers	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/baselightningmodule.py	/^    def configure_optimizers(self) -> Any:$/;"	m	class:BaseLightningClass	typeref:typename:Any
 contains_chinese	steer_moe/tokenizer/glm4/cosyvoice/utils/frontend_utils.py	/^def contains_chinese(text):$/;"	f
-contiguous_gradients	configs/stage2.json	/^    "contiguous_gradients": true$/;"	b	object:zero_optimization
+contiguous_gradients	configs/stage2.json	/^    "contiguous_gradients": true,$/;"	b	object:zero_optimization
+contiguous_gradients	configs/stage2_simple.json	/^    "contiguous_gradients": true,$/;"	b	object:zero_optimization
 contiguous_gradients	configs/stage3.json	/^    "contiguous_gradients": true,$/;"	b	object:zero_optimization
 contiguous_gradients	configs/stage3_wo_offload.json	/^    "contiguous_gradients": true,$/;"	b	object:zero_optimization
 convert_pad_shape	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/model.py	/^def convert_pad_shape(pad_shape):$/;"	f
@@ -1067,6 +1070,9 @@ enabled	configs/stage0.json	/^    "enabled": "auto",$/;"	s	object:fp16
 enabled	configs/stage2.json	/^    "enabled": "auto",$/;"	s	object:fp16
 enabled	configs/stage2.json	/^    "enabled": true,$/;"	b	object:flops_profiler
 enabled	configs/stage2.json	/^    "enabled": true,$/;"	b	object:tensorboard
+enabled	configs/stage2_simple.json	/^    "enabled": "auto",$/;"	s	object:fp16
+enabled	configs/stage2_simple.json	/^    "enabled": false$/;"	b	object:flops_profiler
+enabled	configs/stage2_simple.json	/^    "enabled": false$/;"	b	object:tensorboard
 enabled	configs/stage3.json	/^    "enabled": "auto"$/;"	s	object:bf16
 enabled	configs/stage3.json	/^    "enabled": "auto",$/;"	s	object:fp16
 enabled	configs/stage3.json	/^    "enabled": true,$/;"	b	object:flops_profiler
@@ -1125,6 +1131,7 @@ flash_attn_func	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer_use_m
 flash_attn_kvpacked_func	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer.py	/^    flash_attn_kvpacked_func = None$/;"	v
 flash_attn_kvpacked_func	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer_use_mask.py	/^    flash_attn_kvpacked_func = None$/;"	v
 flops_profiler	configs/stage2.json	/^  "flops_profiler": {$/;"	o
+flops_profiler	configs/stage2_simple.json	/^  "flops_profiler": {$/;"	o
 flops_profiler	configs/stage3.json	/^  "flops_profiler": {$/;"	o
 flow_checkpoint	steer_moe/tokenizer/glm4/web_demo.py	/^    flow_checkpoint = os.path.join(args.flow_path, 'flow.pt')$/;"	v
 flow_config	steer_moe/tokenizer/glm4/web_demo.py	/^    flow_config = os.path.join(args.flow_path, "config.yaml")$/;"	v
@@ -1315,6 +1322,7 @@ forward_one_step	steer_moe/tokenizer/glm4/cosyvoice/transformer/decoder.py	/^   
 forward_qkv	steer_moe/tokenizer/glm4/cosyvoice/transformer/attention.py	/^    def forward_qkv($/;"	m	class:MultiHeadedAttention	typeref:typename:Tuple[torch.Tensor,torch.Tensor,torch.Tensor]
 fp16	configs/stage0.json	/^  "fp16": {$/;"	o
 fp16	configs/stage2.json	/^  "fp16": {$/;"	o
+fp16	configs/stage2_simple.json	/^  "fp16": {$/;"	o
 fp16	configs/stage3.json	/^  "fp16": {$/;"	o
 fp16	configs/stage3_wo_offload.json	/^  "fp16": {$/;"	o
 freeze_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def freeze_encoder(self):$/;"	m	class:WhisperForAudioClassification
@@ -1401,10 +1409,14 @@ gr	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/app.py	/^import gradio
 gr	steer_moe/tokenizer/glm4/web_demo.py	/^import gradio as gr$/;"	I	nameref:module:gradio
 gradient_accumulation_steps	configs/stage0.json	/^  "gradient_accumulation_steps": "auto",$/;"	s
 gradient_accumulation_steps	configs/stage2.json	/^  "gradient_accumulation_steps": "auto",$/;"	s
+gradient_accumulation_steps	configs/stage2_simple.json	/^  "gradient_accumulation_steps": "auto", $/;"	s
 gradient_accumulation_steps	configs/stage3.json	/^  "gradient_accumulation_steps": "auto",$/;"	s
 gradient_accumulation_steps	configs/stage3_wo_offload.json	/^  "gradient_accumulation_steps": "auto",$/;"	s
+gradient_checkpointing_disable	steer_moe/models.py	/^    def gradient_checkpointing_disable(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
+gradient_checkpointing_enable	steer_moe/models.py	/^    def gradient_checkpointing_enable(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
 gradient_clipping	configs/stage0.json	/^  "gradient_clipping": "auto",$/;"	s
 gradient_clipping	configs/stage2.json	/^  "gradient_clipping": "auto",$/;"	s
+gradient_clipping	configs/stage2_simple.json	/^  "gradient_clipping": "auto",$/;"	s
 gradient_clipping	configs/stage3.json	/^  "gradient_clipping": "auto",$/;"	s
 gradient_clipping	configs/stage3_wo_offload.json	/^  "gradient_clipping": "auto",$/;"	s
 group_dict_by_prefix	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^def group_dict_by_prefix(prefix: str, d: Dict) -> Tuple[Dict, Dict]:$/;"	f	typeref:typename:Tuple[Dict,Dict]
@@ -1421,6 +1433,7 @@ history_state	steer_moe/tokenizer/glm4/web_demo.py	/^        history_state = gr.
 hybrid_model_test	steer_moe/models.py	/^def hybrid_model_test():$/;"	f
 hysteresis	configs/stage0.json	/^    "hysteresis": 2,$/;"	n	object:fp16
 hysteresis	configs/stage2.json	/^    "hysteresis": 2,$/;"	n	object:fp16
+hysteresis	configs/stage2_simple.json	/^    "hysteresis": 2,$/;"	n	object:fp16
 hysteresis	configs/stage3.json	/^    "hysteresis": 2,$/;"	n	object:fp16
 hysteresis	configs/stage3_wo_offload.json	/^    "hysteresis": 2,$/;"	n	object:fp16
 inference	steer_moe/tokenizer/glm4/cosyvoice/cli/model.py	/^    def inference(self, text, text_len, flow_embedding, llm_embedding=torch.zeros(0, 192),$/;"	m	class:CosyVoiceModel
@@ -1443,6 +1456,7 @@ init_weights	steer_moe/tokenizer/glm4/cosyvoice/utils/common.py	/^def init_weigh
 init_weights	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/xutils.py	/^def init_weights(m, mean=0.0, std=0.01):$/;"	f
 initial_scale_power	configs/stage0.json	/^    "initial_scale_power": 16,$/;"	n	object:fp16
 initial_scale_power	configs/stage2.json	/^    "initial_scale_power": 16,$/;"	n	object:fp16
+initial_scale_power	configs/stage2_simple.json	/^    "initial_scale_power": 16,$/;"	n	object:fp16
 initial_scale_power	configs/stage3.json	/^    "initial_scale_power": 16,$/;"	n	object:fp16
 initial_scale_power	configs/stage3_wo_offload.json	/^    "initial_scale_power": 16,$/;"	n	object:fp16
 initialize_fn	steer_moe/tokenizer/glm4/web_demo.py	/^    def initialize_fn():$/;"	f
@@ -1517,10 +1531,12 @@ logger	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^logger = logging.ge
 logger	whisper_train/main_word_correct_clips.py	/^logger = logging.get_logger(__name__)$/;"	v
 loss_scale	configs/stage0.json	/^    "loss_scale": 0,$/;"	n	object:fp16
 loss_scale	configs/stage2.json	/^    "loss_scale": 0,$/;"	n	object:fp16
+loss_scale	configs/stage2_simple.json	/^    "loss_scale": 0,$/;"	n	object:fp16
 loss_scale	configs/stage3.json	/^    "loss_scale": 0,$/;"	n	object:fp16
 loss_scale	configs/stage3_wo_offload.json	/^    "loss_scale": 0,$/;"	n	object:fp16
 loss_scale_window	configs/stage0.json	/^    "loss_scale_window": 1000,$/;"	n	object:fp16
 loss_scale_window	configs/stage2.json	/^    "loss_scale_window": 1000,$/;"	n	object:fp16
+loss_scale_window	configs/stage2_simple.json	/^    "loss_scale_window": 1000,$/;"	n	object:fp16
 loss_scale_window	configs/stage3.json	/^    "loss_scale_window": 1000,$/;"	n	object:fp16
 loss_scale_window	configs/stage3_wo_offload.json	/^    "loss_scale_window": 1000,$/;"	n	object:fp16
 lowercase	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/cleaners.py	/^def lowercase(text):$/;"	f
@@ -1543,7 +1559,7 @@ main_input_name	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    main_i
 make_cond_model_fn	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/sampling.py	/^def make_cond_model_fn(model, cond_fn):$/;"	f
 make_pad_mask	steer_moe/tokenizer/glm4/cosyvoice/utils/mask.py	/^def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:$/;"	f	typeref:typename:torch.Tensor
 mask	steer_moe/tokenizer/glm4/cosyvoice/utils/block_mask_util.py	/^    mask = create_grid_mask(seq_length=8, trunck_length=3, fill_triangle=True).int()$/;"	v
-max_length	steer_moe/utils.py	/^    max_length: int = 512$/;"	v	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:int
+max_length	steer_moe/utils.py	/^    max_length: int = 2048$/;"	v	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:int
 max_new_token	steer_moe/tokenizer/glm4/web_demo.py	/^            max_new_token = gr.Number($/;"	v
 maximum_path	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/monotonic_align/__init__.py	/^def maximum_path(value, mask):$/;"	f
 maximum_path_c	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/monotonic_align/core.pyx	/^cpdef void maximum_path_c(int[:,:,::1] paths, float[:,:,::1] values, int[::1] t_xs, int[::1] t_y/;"	f
@@ -1556,6 +1572,7 @@ mel_spectrogram	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/aud
 met	whisper_train/main_word_correct_clips.py	/^    import torch_xla.debug.metrics as met$/;"	I	nameref:module:torch_xla.debug.metrics
 min_loss_scale	configs/stage0.json	/^    "min_loss_scale": 1$/;"	n	object:fp16
 min_loss_scale	configs/stage2.json	/^    "min_loss_scale": 1$/;"	n	object:fp16
+min_loss_scale	configs/stage2_simple.json	/^    "min_loss_scale": 1$/;"	n	object:fp16
 min_loss_scale	configs/stage3.json	/^    "min_loss_scale": 1$/;"	n	object:fp16
 min_loss_scale	configs/stage3_wo_offload.json	/^    "min_loss_scale": 1$/;"	n	object:fp16
 model	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/app.py	/^model = load_matcha(args.model, MATCHA_TTS_LOC(args.model), device)$/;"	v
@@ -1651,7 +1668,8 @@ output_file	configs/stage2.json	/^    "output_file": null$/;"	z	object:flops_pro
 output_file	configs/stage3.json	/^    "output_file": null$/;"	z	object:flops_profiler
 output_path	configs/stage2.json	/^    "output_path": "..\/log\/ds_logs\/",$/;"	s	object:tensorboard
 output_size	steer_moe/tokenizer/glm4/cosyvoice/transformer/encoder.py	/^    def output_size(self) -> int:$/;"	m	class:BaseEncoder	typeref:typename:int
-overlap_comm	configs/stage2.json	/^    "overlap_comm": false,$/;"	b	object:zero_optimization
+overlap_comm	configs/stage2.json	/^    "overlap_comm": true,$/;"	b	object:zero_optimization
+overlap_comm	configs/stage2_simple.json	/^    "overlap_comm": false,$/;"	b	object:zero_optimization
 overlap_comm	configs/stage3.json	/^    "overlap_comm": true,$/;"	b	object:zero_optimization
 overlap_comm	configs/stage3_wo_offload.json	/^    "overlap_comm": true,$/;"	b	object:zero_optimization
 pad1d	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^def pad1d(x: torch.Tensor, paddings: tp.Tuple[int, int], mode: str = 'constant', value: float = /;"	f
@@ -1743,10 +1761,12 @@ raw_train_data_path	whisper_train/data_process.py	/^    raw_train_data_path = ".
 read	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^    def read(self, name: str) -> bytes:$/;"	m	class:Tar	typeref:typename:bytes
 read_json_lists	steer_moe/tokenizer/glm4/cosyvoice/utils/file_utils.py	/^def read_json_lists(list_file):$/;"	f
 read_lists	steer_moe/tokenizer/glm4/cosyvoice/utils/file_utils.py	/^def read_lists(list_file):$/;"	f
-reduce_bucket_size	configs/stage2.json	/^    "reduce_bucket_size": 2e8,$/;"	n	object:zero_optimization
+reduce_bucket_size	configs/stage2.json	/^    "reduce_bucket_size": 5e8,$/;"	n	object:zero_optimization
+reduce_bucket_size	configs/stage2_simple.json	/^    "reduce_bucket_size": 2e8,$/;"	n	object:zero_optimization
 reduce_bucket_size	configs/stage3.json	/^    "reduce_bucket_size": "auto",$/;"	s	object:zero_optimization
 reduce_bucket_size	configs/stage3_wo_offload.json	/^    "reduce_bucket_size": "auto",$/;"	s	object:zero_optimization
 reduce_scatter	configs/stage2.json	/^    "reduce_scatter": true,$/;"	b	object:zero_optimization
+reduce_scatter	configs/stage2_simple.json	/^    "reduce_scatter": true,$/;"	b	object:zero_optimization
 refine_mask	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer_use_mask.py	/^    def refine_mask(self, mask):$/;"	m	class:ContinuousTransformer
 rel_shift	steer_moe/tokenizer/glm4/cosyvoice/transformer/attention.py	/^    def rel_shift(self, x):$/;"	m	class:RelPositionMultiHeadedAttention
 rel_shift	steer_moe/tokenizer/glm4/cosyvoice/transformer/attention.py	/^    def rel_shift(self, x: torch.Tensor) -> torch.Tensor:$/;"	m	class:BlockRelPositionMultiHeadedAttention	typeref:typename:torch.Tensor
@@ -1769,6 +1789,8 @@ return_attention_mask	steer_moe/utils.py	/^    return_attention_mask: bool = Fal
 rms_norm	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^def rms_norm(x, scale, eps):$/;"	f
 rotate_half	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer.py	/^def rotate_half(x):$/;"	f
 rotate_half	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer_use_mask.py	/^def rotate_half(x):$/;"	f
+round_robin_gradients	configs/stage2.json	/^    "round_robin_gradients": true$/;"	b	object:zero_optimization
+round_robin_gradients	configs/stage2_simple.json	/^    "round_robin_gradients": false$/;"	b	object:zero_optimization
 rpc	tmpx07ntkc2/_remote_module_non_scriptable.py	/^import torch.distributed.rpc as rpc$/;"	I	nameref:module:torch.distributed.rpc
 sample	steer_moe/tokenizer/glm4/cosyvoice/dataset/dataset.py	/^    def sample(self, data):$/;"	m	class:DistributedSampler
 sample	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/sampling.py	/^def sample(model, x, steps, eta, **extra_args):$/;"	f
@@ -1839,6 +1861,7 @@ split_by_batch_index	steer_moe/tokenizer/glm4/speech_tokenizer/generation_whispe
 split_paragraph	steer_moe/tokenizer/glm4/cosyvoice/utils/frontend_utils.py	/^def split_paragraph(text: str, tokenize, lang="zh", token_max_n=80, token_min_n=60, merge_len=20/;"	f
 stage	configs/stage0.json	/^    "stage": 0$/;"	n	object:zero_optimization
 stage	configs/stage2.json	/^    "stage": 2,$/;"	n	object:zero_optimization
+stage	configs/stage2_simple.json	/^    "stage": 2,$/;"	n	object:zero_optimization
 stage	configs/stage3.json	/^    "stage": 3,$/;"	n	object:zero_optimization
 stage	configs/stage3_wo_offload.json	/^    "stage": 3,$/;"	n	object:zero_optimization
 stage3_gather_16bit_weights_on_model_save	configs/stage3.json	/^    "stage3_gather_16bit_weights_on_model_save": false$/;"	b	object:zero_optimization
@@ -1859,6 +1882,8 @@ steps_per_print	configs/stage3.json	/^  "steps_per_print": 5,$/;"	n
 steps_per_print	configs/stage3_wo_offload.json	/^  "steps_per_print": 5,$/;"	n
 stft_fn	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/denoiser.py	/^        def stft_fn(audio, n_fft, hop_length, win_length, window):$/;"	f	member:Denoiser.__init__	file:
 stream_inference	steer_moe/tokenizer/glm4/flow_inference.py	/^    def stream_inference(self, token):$/;"	m	class:AudioDecoder
+sub_group_size	configs/stage2.json	/^    "sub_group_size": 1e9,$/;"	n	object:zero_optimization
+sub_group_size	configs/stage2_simple.json	/^    "sub_group_size": 5e7,$/;"	n	object:zero_optimization
 sub_group_size	configs/stage3.json	/^    "sub_group_size": 1e9,$/;"	n	object:zero_optimization
 sub_group_size	configs/stage3_wo_offload.json	/^    "sub_group_size": 1e9,$/;"	n	object:zero_optimization
 submit_btn	steer_moe/tokenizer/glm4/web_demo.py	/^                submit_btn = gr.Button("Submit")$/;"	v
@@ -1878,6 +1903,7 @@ task_wrapper	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/utils.
 teardown	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/data/text_mel_datamodule.py	/^    def teardown(self, stage: Optional[str] = None):$/;"	m	class:TextMelDataModule
 temperature	steer_moe/tokenizer/glm4/web_demo.py	/^            temperature = gr.Number($/;"	v
 tensorboard	configs/stage2.json	/^  "tensorboard": {$/;"	o
+tensorboard	configs/stage2_simple.json	/^  "tensorboard": {$/;"	o
 test	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/Makefile	/^test: ## Run not slow tests$/;"	t
 test-full	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/Makefile	/^test-full: ## Run all tests$/;"	t
 test_aligner_output_and_lb_loss	tests/test_aligner.py	/^def test_aligner_output_and_lb_loss():$/;"	f
@@ -1929,6 +1955,7 @@ train_lora	whisper_train/main_word_correct_clips.py	/^def train_lora():$/;"	f
 train_lora_in_8bit	whisper_train/main_word_correct_clips.py	/^def train_lora_in_8bit():$/;"	f
 train_micro_batch_size_per_gpu	configs/stage0.json	/^  "train_micro_batch_size_per_gpu": "auto",$/;"	s
 train_micro_batch_size_per_gpu	configs/stage2.json	/^  "train_micro_batch_size_per_gpu": "auto",$/;"	s
+train_micro_batch_size_per_gpu	configs/stage2_simple.json	/^  "train_micro_batch_size_per_gpu": "auto",$/;"	s
 train_micro_batch_size_per_gpu	configs/stage3.json	/^  "train_micro_batch_size_per_gpu": "auto",$/;"	s
 train_micro_batch_size_per_gpu	configs/stage3_wo_offload.json	/^  "train_micro_batch_size_per_gpu": "auto",$/;"	s
 train_one_epoc	steer_moe/tokenizer/glm4/cosyvoice/utils/executor.py	/^    def train_one_epoc(self, model, optimizer, scheduler, train_data_loader, cv_data_loader, wri/;"	m	class:Executor
@@ -1979,9 +2006,11 @@ write_mels	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/onnx/infer.py	
 write_wavs	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/onnx/infer.py	/^def write_wavs(model, inputs, output_dir, external_vocoder=None):$/;"	f
 xm	whisper_train/main_word_correct_clips.py	/^    import torch_xla.core.xla_model as xm$/;"	I	nameref:module:torch_xla.core.xla_model
 zero_allow_untested_optimizer	configs/stage2.json	/^  "zero_allow_untested_optimizer": true,$/;"	b
+zero_allow_untested_optimizer	configs/stage2_simple.json	/^  "zero_allow_untested_optimizer": true,$/;"	b
 zero_init	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^def zero_init(layer):$/;"	f
 zero_optimization	configs/stage0.json	/^  "zero_optimization": {$/;"	o
 zero_optimization	configs/stage2.json	/^  "zero_optimization": {$/;"	o
+zero_optimization	configs/stage2_simple.json	/^  "zero_optimization": {$/;"	o
 zero_optimization	configs/stage3.json	/^  "zero_optimization": {$/;"	o
 zero_optimization	configs/stage3_wo_offload.json	/^  "zero_optimization": {$/;"	o
 协议	steer_moe/tokenizer/glm4/README.md	/^## 协议$/;"	s	chapter:GLM-4-Voice

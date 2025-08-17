@@ -14,6 +14,12 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(process)d - %(levelname)s - %(filename)s>%(funcName)s>%(lineno)d - %(message)s')
 
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from steer_moe.tokenizer.whisper_Lv3.whisper import WhisperEncoder
+
 def _get_num_layers(encoder):
     # Recursively find the underlying WhisperEncoder and return the number of layers
     if hasattr(encoder, 'speech_encoder'):
@@ -40,24 +46,21 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
     Efficient layer-wise steering implementation using a single router.
     This approach uses one router to assign weights to steering vectors for all layers.
     """
-    def __init__(self, original_whisper_encoder, num_experts: int = 8, steering_scale: float = 0.1):
+    # def __init__(self, original_whisper_encoder, num_experts: int = 8, steering_scale: float = 0.1):
+    def __init__(self, whisper_encoder_path, num_experts: int = 8, steering_scale: float = 0.1):
         super().__init__()
-        self.original_encoder = original_whisper_encoder
+        # self.original_encoder = original_whisper_encoder
+        self.original_encoder = WhisperEncoder(whisper_encoder_path)
         self.num_experts = num_experts
         self.steering_scale = steering_scale
-        logging.debug(f"original_whisper_encoder: {original_whisper_encoder}")
         logging.debug(f"self.original_encoder: {self.original_encoder}")
-        logging.debug(f"Has speech_encoder attribute: {hasattr(original_whisper_encoder, 'speech_encoder')}")
-        logging.debug(f"Has _modules attribute: {hasattr(original_whisper_encoder, '_modules')}")
-        if hasattr(original_whisper_encoder, '_modules'):
-            logging.debug(f"Available modules: {list(original_whisper_encoder._modules.keys())}")
         
         # Get the number of layers from the speech encoder
-        self.num_layers = _get_num_layers(original_whisper_encoder)
+        self.num_layers = _get_num_layers(self.original_encoder)
         
         # Get the feature dimension from the original encoder
-        if hasattr(original_whisper_encoder, 'config'):
-            self.feature_dim = original_whisper_encoder.config.d_model
+        if hasattr(self.original_encoder, 'config'):
+            self.feature_dim = self.original_encoder.config.d_model
         else:
             # Default to 1280 for Whisper large
             self.feature_dim = 1280
@@ -206,8 +209,13 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             speech_encoder = self.original_encoder
             
         # Apply initial processing (conv layers, positional embedding, etc.)
-        x = mel_features
-        logging.debug(f"original x: {x.shape}, {x.dtype}, {x}")
+        model_device = self.steering_vectors.device
+        model_dtype = self.steering_vectors.dtype 
+
+        logging.info(f"model_device: {model_device}, model_dtype: {model_dtype}")
+        speech_encoder=speech_encoder.to(model_device)
+        x = mel_features.to(device=model_device, dtype=model_dtype)
+        logging.info(f"original x: {x.shape}, {x.dtype}, {x.device}, {x}")
 
         # x=self.original_encoder._mask_input_features
         
@@ -221,15 +229,16 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         else:
             logging.error(f"no conv1 layer found")
 
-        logging.debug(f"conv1+conv2 x: {x.shape}, {x.dtype}, {x}")
+        logging.info(f"conv1+conv2 x: {x.shape}, {x.dtype}, {x.device}, {x}")
             
         if hasattr(speech_encoder, 'embed_positions'):
-            positions = speech_encoder.embed_positions.weight[:x.size(1)]
+            # positions = speech_encoder.embed_positions.weight[:x.size(1)]
+            positions = speech_encoder.embed_positions.weight[:x.size(1)].to(model_device)
             x = (x + positions) * speech_encoder.embed_scale
         else:
             logging.error(f"no embed_positions layer found")
 
-        logging.debug(f"embed_positions x: {x.shape}, {x.dtype}, {x}")
+        logging.info(f"embed_positions x: {x.shape}, {x.dtype}, {x.device}, {x}")
             
         # Apply dropout if present
         if hasattr(speech_encoder, 'dropout'):
@@ -248,6 +257,7 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             encoder_layers = []
             
         for layer_idx, layer in enumerate(encoder_layers):
+            layer=layer.to(model_device)
             if layer_idx >= self.num_layers:
                 # More layers than we have steering for, process normally
                 x = layer(x)
@@ -257,6 +267,7 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             layer_output = layer(x)[0]
             
             # Compute steering for this layer using the single router
+            self.router = self.router.to(model_device)
             router_output = self.router(layer_output)  # (batch, seq_len, num_experts * num_layers)
             
             # Extract gating scores for this layer
