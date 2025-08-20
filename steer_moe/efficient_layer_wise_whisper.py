@@ -82,77 +82,77 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         for param in self.original_encoder.parameters():
             param.requires_grad = False
             
-    def forward(self, mel_spec, return_gating=False):
-        """
-        Forward pass with efficient layer-wise steering.
+    # def forward(self, mel_spec, return_gating=False):
+    #     """
+    #     Forward pass with efficient layer-wise steering.
         
-        Args:
-            mel_spec: Mel spectrogram input
-            return_gating: Whether to return gating scores for analysis
+    #     Args:
+    #         mel_spec: Mel spectrogram input
+    #         return_gating: Whether to return gating scores for analysis
             
-        Returns:
-            Steered encoder output
-        """
-        # Store gating scores for analysis
-        gating_scores_list = []
+    #     Returns:
+    #         Steered encoder output
+    #     """
+    #     # Store gating scores for analysis
+    #     gating_scores_list = []
         
-        # Get the encoder layers
-        encoder_layers = _get_layers(self.original_encoder)
+    #     # Get the encoder layers
+    #     encoder_layers = _get_layers(self.original_encoder)
         
-        # Process through each layer with steering
-        x = mel_spec
-        for layer_idx, layer in enumerate(encoder_layers):
-            # 1. Apply original layer
-            layer_output = layer(x)
+    #     # Process through each layer with steering
+    #     x = mel_spec
+    #     for layer_idx, layer in enumerate(encoder_layers):
+    #         # 1. Apply original layer
+    #         layer_output = layer(x)
             
-            # 2. Compute steering for this layer using the single router
-            # Get the router output for this specific layer
-            router_output = self.router(layer_output)  # (batch, seq_len, num_experts * num_layers)
+    #         # 2. Compute steering for this layer using the single router
+    #         # Get the router output for this specific layer
+    #         router_output = self.router(layer_output)  # (batch, seq_len, num_experts * num_layers)
             
-            # Extract gating scores for this layer
-            start_idx = layer_idx * self.num_experts
-            end_idx = (layer_idx + 1) * self.num_experts
-            layer_gating_logits = router_output[:, :, start_idx:end_idx]  # (batch, seq_len, num_experts)
+    #         # Extract gating scores for this layer
+    #         start_idx = layer_idx * self.num_experts
+    #         end_idx = (layer_idx + 1) * self.num_experts
+    #         layer_gating_logits = router_output[:, :, start_idx:end_idx]  # (batch, seq_len, num_experts)
             
-            # Apply softmax to get gating scores
-            gating_scores = F.softmax(layer_gating_logits, dim=-1)
+    #         # Apply softmax to get gating scores
+    #         gating_scores = F.softmax(layer_gating_logits, dim=-1)
             
-            # 3. Get steering vectors for this layer
-            steering_vectors = self.steering_vectors[layer_idx]  # (num_experts, feature_dim)
-            layer_scale = self.layer_scales[layer_idx]
+    #         # 3. Get steering vectors for this layer
+    #         steering_vectors = self.steering_vectors[layer_idx]  # (num_experts, feature_dim)
+    #         layer_scale = self.layer_scales[layer_idx]
             
-            # 4. Compute steering adjustment
-            # (batch, seq_len, num_experts) @ (num_experts, feature_dim) -> (batch, seq_len, feature_dim)
-            steering_adjustment = torch.einsum('bte,ef->btf', gating_scores, steering_vectors)
+    #         # 4. Compute steering adjustment
+    #         # (batch, seq_len, num_experts) @ (num_experts, feature_dim) -> (batch, seq_len, feature_dim)
+    #         steering_adjustment = torch.einsum('bte,ef->btf', gating_scores, steering_vectors)
             
-            # 5. Apply steering with layer-specific scaling
-            steered_output = layer_output + layer_scale * steering_adjustment
+    #         # 5. Apply steering with layer-specific scaling
+    #         steered_output = layer_output + layer_scale * steering_adjustment
             
-            # Store gating scores for analysis
-            gating_scores_list.append(gating_scores)
+    #         # Store gating scores for analysis
+    #         gating_scores_list.append(gating_scores)
             
-            # Update x for next layer
-            x = steered_output
+    #         # Update x for next layer
+    #         x = steered_output
 
-        logging.debug(f"x: {x.shape}, {x.dtype}, {x}")
+    #     logging.debug(f"x: {x.shape}, {x.dtype}, {x}")
         
-        # Apply final layer norm if exists
-        if hasattr(self.original_encoder, 'speech_encoder') and hasattr(self.original_encoder.speech_encoder, 'layer_norm'):
-            final_output = self.original_encoder.speech_encoder.layer_norm(x)
-            logging.debug(f"speech_encoder final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
-        elif hasattr(self.original_encoder, '_modules') and 'speech_encoder' in self.original_encoder._modules and hasattr(self.original_encoder._modules['speech_encoder'], 'layer_norm'):
-            final_output = self.original_encoder._modules['speech_encoder'].layer_norm(x)
-            logging.debug(f"_modules final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
-        elif hasattr(self.original_encoder, 'layer_norm'):
-            final_output = self.original_encoder.layer_norm(x)
-            logging.debug(f"layer_norm final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
-        else:
-            final_output = x
-            logging.debug(f"x final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
+    #     # Apply final layer norm if exists
+    #     if hasattr(self.original_encoder, 'speech_encoder') and hasattr(self.original_encoder.speech_encoder, 'layer_norm'):
+    #         final_output = self.original_encoder.speech_encoder.layer_norm(x)
+    #         logging.debug(f"speech_encoder final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
+    #     elif hasattr(self.original_encoder, '_modules') and 'speech_encoder' in self.original_encoder._modules and hasattr(self.original_encoder._modules['speech_encoder'], 'layer_norm'):
+    #         final_output = self.original_encoder._modules['speech_encoder'].layer_norm(x)
+    #         logging.debug(f"_modules final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
+    #     elif hasattr(self.original_encoder, 'layer_norm'):
+    #         final_output = self.original_encoder.layer_norm(x)
+    #         logging.debug(f"layer_norm final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
+    #     else:
+    #         final_output = x
+    #         logging.debug(f"x final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
             
-        if return_gating:
-            return final_output, gating_scores_list
-        return final_output
+    #     if return_gating:
+    #         return final_output, gating_scores_list
+    #     return final_output
     
     def tokenize_waveform(self, audio, return_gating=False):
         """
@@ -212,10 +212,10 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         model_device = self.steering_vectors.device
         model_dtype = self.steering_vectors.dtype 
 
-        logging.info(f"model_device: {model_device}, model_dtype: {model_dtype}")
+        logging.debug(f"model_device: {model_device}, model_dtype: {model_dtype}")
         speech_encoder=speech_encoder.to(model_device)
         x = mel_features.to(device=model_device, dtype=model_dtype)
-        logging.info(f"original x: {x.shape}, {x.dtype}, {x.device}, {x}")
+        logging.debug(f"original x: {x.shape}, {x.dtype}, {x.device}, {x}")
 
         # x=self.original_encoder._mask_input_features
         
@@ -229,7 +229,7 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         else:
             logging.error(f"no conv1 layer found")
 
-        logging.info(f"conv1+conv2 x: {x.shape}, {x.dtype}, {x.device}, {x}")
+        logging.debug(f"conv1+conv2 x: {x.shape}, {x.dtype}, {x.device}, {x}")
             
         if hasattr(speech_encoder, 'embed_positions'):
             # positions = speech_encoder.embed_positions.weight[:x.size(1)]
@@ -238,7 +238,7 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         else:
             logging.error(f"no embed_positions layer found")
 
-        logging.info(f"embed_positions x: {x.shape}, {x.dtype}, {x.device}, {x}")
+        logging.debug(f"embed_positions x: {x.shape}, {x.dtype}, {x.device}, {x}")
             
         # Apply dropout if present
         if hasattr(speech_encoder, 'dropout'):

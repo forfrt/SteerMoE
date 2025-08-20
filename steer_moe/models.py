@@ -488,6 +488,13 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
 
         # 6. Concatenate audio prompts with text embeddings
         # inputs_embeds: Format: [audio_prompts, text_embeds] = [audio_prompts, text_prompts, labels]
+
+        # input at timestamp t: [bos, audio_prompts, text_prompts, gen_t]
+        # output at timestamp t: [audio_prompts, text_prompts, gen_{t+1}]
+
+        # output at last timestamp:[audio_prompts, text_prompts, final_pred] 
+        # label at last timestamp:[len(audio_prompts)*-100, len(text_prompts)*-100, label] 
+
         inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)
         # inputs_embeds: (batch, audio_seq_len + text_seq_len, decoder_dim)
         logging.debug(f"inputs_embeds: {inputs_embeds.shape}, {inputs_embeds.dtype}, {inputs_embeds}")
@@ -530,6 +537,7 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
                 attention_mask=attention_mask,
                 labels=full_labels
             )
+            output: (logits, loss)
         else:
             # No labels - inference mode
             output = self.llm_decoder(
