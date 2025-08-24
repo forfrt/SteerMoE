@@ -28,7 +28,7 @@ training:
   output_dir: "./results/layer_wise_steermoe"
   logging_dir: "./logs/layer_wise_steermoe"
   batch_size: 16
-  epochs: 16
+  epochs: 29
   learning_rate: 1e-4
   steering_learning_rate: 1e-3
   router_learning_rate: 1e-4
@@ -40,17 +40,18 @@ training:
 
 # Dataset Configuration
 parquet_dirs:
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_1_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_2_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_1_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_2_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_3_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_4_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_5_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_6_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_7_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_8_nots_processed_in_batch/"
-  - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_9_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_1_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/xunfei_202409_2_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_1_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_2_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_3_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_4_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_5_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_6_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_7_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_8_nots_processed_in_batch/"
+  # - "/root/autodl-nas/ruitao/data/train/processed_parquet/WORD_CORRECT_9_nots_processed_in_batch/"
+  - "/root/autodl-nas/ruitao/data/processed_aishell/train/"
 
 audio_column: "audio"
 text_column: "text"
@@ -92,3 +93,8 @@ save_strategy: "epoch"
 load_best_model_at_end: true
 metric_for_best_model: "cer"
 greater_is_better: false 
+
+# pooling size setting to downsample the audio features, https://huggingface.co/zai-org/glm-4-voice-tokenizer/blob/main/config.json
+pooling_kernel_size: 4
+pooling_position: 32
+pooling_type: "avg"

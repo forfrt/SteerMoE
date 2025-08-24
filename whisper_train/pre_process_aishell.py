@@ -48,7 +48,7 @@ def create_aishell_hf_dataset(whisper_feature_extractor, llm_tokenizer, audio_ba
     logging.info(f"transcription_list: {len(transcription_list)}")
 
     # 3. Create a Hugging Face Dataset
-    batch_size=100
+    batch_size=10000
     error_batchs=[]
     for i in tqdm.tqdm(range(0, len(audio_files), batch_size)):
         batch_audio_files = audio_files[i:i+batch_size]
@@ -61,6 +61,9 @@ def create_aishell_hf_dataset(whisper_feature_extractor, llm_tokenizer, audio_ba
             "audio": batch_audio_files,
             "sentence": batch_transcription_list,
         }
+
+        logging.info(f"batch_audio_files[:10]: {batch_audio_files[:10]}")
+        logging.info(f"batch_transcription_list[:10]: {batch_transcription_list[:10]}")
 
         # Using from_dict is memory-efficient for this step
         raw_dataset = Dataset.from_dict(dataset_dict)
@@ -76,7 +79,7 @@ def create_aishell_hf_dataset(whisper_feature_extractor, llm_tokenizer, audio_ba
             return prepare_dataset(batch, 'audio', 'sentence', whisper_feature_extractor, llm_tokenizer, 16000)
 
         try:
-            tmp_dataset = tmp_dataset.map(_prepare, remove_columns=tmp_dataset.column_names, num_proc=100)
+            tmp_dataset = tmp_dataset.map(_prepare, remove_columns=tmp_dataset.column_names, num_proc=200)
             # tmp_dataset = tmp_dataset.map(data_pipe.prepare_dataset, remove_columns=tmp_dataset.column_names, num_proc=100)
         except:
             logging.error(f"batch_size: {batch_size}, i: {i}")

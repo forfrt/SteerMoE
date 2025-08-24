@@ -81,78 +81,21 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         # Freeze the original encoder
         for param in self.original_encoder.parameters():
             param.requires_grad = False
-            
-    # def forward(self, mel_spec, return_gating=False):
-    #     """
-    #     Forward pass with efficient layer-wise steering.
-        
-    #     Args:
-    #         mel_spec: Mel spectrogram input
-    #         return_gating: Whether to return gating scores for analysis
-            
-    #     Returns:
-    #         Steered encoder output
-    #     """
-    #     # Store gating scores for analysis
-    #     gating_scores_list = []
-        
-    #     # Get the encoder layers
-    #     encoder_layers = _get_layers(self.original_encoder)
-        
-    #     # Process through each layer with steering
-    #     x = mel_spec
-    #     for layer_idx, layer in enumerate(encoder_layers):
-    #         # 1. Apply original layer
-    #         layer_output = layer(x)
-            
-    #         # 2. Compute steering for this layer using the single router
-    #         # Get the router output for this specific layer
-    #         router_output = self.router(layer_output)  # (batch, seq_len, num_experts * num_layers)
-            
-    #         # Extract gating scores for this layer
-    #         start_idx = layer_idx * self.num_experts
-    #         end_idx = (layer_idx + 1) * self.num_experts
-    #         layer_gating_logits = router_output[:, :, start_idx:end_idx]  # (batch, seq_len, num_experts)
-            
-    #         # Apply softmax to get gating scores
-    #         gating_scores = F.softmax(layer_gating_logits, dim=-1)
-            
-    #         # 3. Get steering vectors for this layer
-    #         steering_vectors = self.steering_vectors[layer_idx]  # (num_experts, feature_dim)
-    #         layer_scale = self.layer_scales[layer_idx]
-            
-    #         # 4. Compute steering adjustment
-    #         # (batch, seq_len, num_experts) @ (num_experts, feature_dim) -> (batch, seq_len, feature_dim)
-    #         steering_adjustment = torch.einsum('bte,ef->btf', gating_scores, steering_vectors)
-            
-    #         # 5. Apply steering with layer-specific scaling
-    #         steered_output = layer_output + layer_scale * steering_adjustment
-            
-    #         # Store gating scores for analysis
-    #         gating_scores_list.append(gating_scores)
-            
-    #         # Update x for next layer
-    #         x = steered_output
 
-    #     logging.debug(f"x: {x.shape}, {x.dtype}, {x}")
-        
-    #     # Apply final layer norm if exists
-    #     if hasattr(self.original_encoder, 'speech_encoder') and hasattr(self.original_encoder.speech_encoder, 'layer_norm'):
-    #         final_output = self.original_encoder.speech_encoder.layer_norm(x)
-    #         logging.debug(f"speech_encoder final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
-    #     elif hasattr(self.original_encoder, '_modules') and 'speech_encoder' in self.original_encoder._modules and hasattr(self.original_encoder._modules['speech_encoder'], 'layer_norm'):
-    #         final_output = self.original_encoder._modules['speech_encoder'].layer_norm(x)
-    #         logging.debug(f"_modules final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
-    #     elif hasattr(self.original_encoder, 'layer_norm'):
-    #         final_output = self.original_encoder.layer_norm(x)
-    #         logging.debug(f"layer_norm final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
-    #     else:
-    #         final_output = x
-    #         logging.debug(f"x final_output: {final_output.shape}, {final_output.dtype}, {final_output}")
-            
-    #     if return_gating:
-    #         return final_output, gating_scores_list
-    #     return final_output
+        # uncomment the following line to use the pooling layer to downsample the features
+        # self.pooling_layer = None
+        # self.init_pooling_layer(pooling_type="max", pooling_kernel_size=4)
+
+
+    def init_pooling_layer(self, pooling_type, pooling_kernel_size):
+        if pooling_kernel_size is not None:
+            if pooling_type == "max":
+                self.pooling_layer = nn.MaxPool1d(kernel_size=pooling_kernel_size)
+            elif pooling_type == "avg":
+                self.pooling_layer = nn.AvgPool1d(kernel_size=pooling_kernel_size)
+            else:
+                raise NotImplementedError(f"Pooling type {pooling_type} not implemented")
+
     
     def tokenize_waveform(self, audio, return_gating=False):
         """

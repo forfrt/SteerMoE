@@ -32,9 +32,9 @@ def prepare_dataset(batch, audio_column, text_column, feature_extractor, tokeniz
     # text_tokens = tokenizer(text, return_tensors='pt', padding='longest', truncation=True)
     text_tokens = tokenizer(text)
 
-    logging.info(f"input_features: {input_features.shape}, dtype: {input_features.dtype}")
-    logging.info(f"text: {text}, input_ids: {len(text_tokens['input_ids'])}")
-    logging.info(f"attention_mask: {len(text_tokens['attention_mask'])}")
+    logging.debug(f"input_features: {input_features.shape}, dtype: {input_features.dtype}")
+    logging.debug(f"text: {text}, input_ids: {len(text_tokens['input_ids'])}")
+    logging.debug(f"attention_mask: {len(text_tokens['attention_mask'])}")
     
     return {
         'input_features': input_features,  # Use 'input_features' to match training pipeline

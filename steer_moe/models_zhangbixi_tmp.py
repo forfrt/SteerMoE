@@ -346,7 +346,12 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
     def __init__(self, whisper_encoder, llm_decoder, num_experts=8, 
                  prompt_proj=None, max_prompt_tokens=None, use_adapter=True):
         super().__init__()
+        
         # Create efficient layer-wise steering Whisper encoder
+        
+        # self.whisper_encoder = EfficientLayerWiseSteeringWhisperEncoder(
+        #     whisper_encoder_path, num_experts=num_experts
+        # )
 
         self.whisper_encoder=whisper_encoder
         self.llm_decoder = llm_decoder          # frozen
@@ -363,6 +368,7 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
         # self.llm_decoder.model.embed_tokens.weight = self.llm_decoder.model.embed_tokens.weight.clone()
         # self.llm_decoder.lm_head.weight = self.llm_decoder.lm_head.weight.clone()
 
+
         # Freeze decoder
         for p in self.llm_decoder.parameters():
             p.requires_grad = False
@@ -378,6 +384,7 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
             else:
                 decoder_input_dim = encoder_output_dim
 
+
             # logging.debug(f"decoder_input_dim: {decoder_input_dim}, encoder_output_dim: {encoder_output_dim}")
             # decoder_input_dim: 896, encoder_output_dim: 1280
             
@@ -387,20 +394,6 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
                 self.prompt_proj = None
         else:
             self.prompt_proj = prompt_proj
-
-        # uncomment this to use pooling layer to downsample the audio features
-        # self.pooling_layer = None
-        # self.init_pooling_layer(pooling_kernel_size=4, pooling_type="avg")
-
-    def init_pooling_layer(self, pooling_kernel_size, pooling_type):
-        if pooling_kernel_size is not None:
-            if pooling_type == "max":
-                self.pooling_layer = nn.MaxPool1d(kernel_size=pooling_kernel_size)
-            elif pooling_type == "avg":
-                self.pooling_layer = nn.AvgPool1d(kernel_size=pooling_kernel_size)
-            else:
-                raise NotImplementedError(f"Pooling type {pooling_type} not implemented")
-        
 
 
     def forward(self, audio_waveform=None, input_features=None, decoder_input_ids=None, labels=None, 
@@ -495,6 +488,13 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
 
         # 6. Concatenate audio prompts with text embeddings
         # inputs_embeds: Format: [audio_prompts, text_embeds] = [audio_prompts, text_prompts, labels]
+
+        # input at timestamp t: [bos, audio_prompts, text_prompts, gen_t]
+        # output at timestamp t: [audio_prompts, text_prompts, gen_{t+1}]
+
+        # output at last timestamp:[audio_prompts, text_prompts, final_pred] 
+        # label at last timestamp:[len(audio_prompts)*-100, len(text_prompts)*-100, label] 
+
         inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)
         # inputs_embeds: (batch, audio_seq_len + text_seq_len, decoder_dim)
         logging.debug(f"inputs_embeds: {inputs_embeds.shape}, {inputs_embeds.dtype}, {inputs_embeds}")
@@ -537,6 +537,7 @@ class SteerMoEEfficientLayerWiseModel(nn.Module):
                 attention_mask=attention_mask,
                 labels=full_labels
             )
+            output: (logits, loss)
         else:
             # No labels - inference mode
             output = self.llm_decoder(
