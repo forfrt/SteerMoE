@@ -179,8 +179,11 @@ conf
 *.pth
 test_audios/output
 
+tags
+
 # Vim
 *.swp
 *.swo
 
 .nfs*
+
