@@ -107,13 +107,17 @@ class EfficientLayerWiseSteeringConformerEncoder(nn.Module):
         for param in self.original_encoder.parameters():
             param.requires_grad = False
 
-    def forward_with_steering(self, mel_features, input_lengths, pad=True,return_full_output=False):
+    def _forward_with_steering(self, mel_features, input_lengths, pad=True,return_full_output=False):
         """
         Forward pass through the speech encoder with steering applied.
         
         Args:
             mel_features: Mel spectrogram features from original encoder
-            return_gating: Whether to return gating scores
+            input_lengths: Lengths of the input sequences (one dimension list or array like variable)
+            pad: Whether to apply padding before processing.
+                 Padding is required for preprocessing conv layers to reduce boundary effect.
+                 Padding length shall align receptive field of conv kernel (speech_encoder.input_preprocessor.context - 1).
+            return_full_output: Whether to return full output including "enc_output, input_lengths, src_mask, gating_scores_list"
             
         Returns"""  """:
             Steered features with optional gating scores
