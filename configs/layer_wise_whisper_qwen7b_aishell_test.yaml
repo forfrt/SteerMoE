@@ -40,19 +40,7 @@ training:
 
 # Dataset Configuration
 parquet_dirs:
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/xunfei_202409_1_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/xunfei_202409_2_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_1_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_2_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_3_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_4_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_5_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_6_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_7_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_8_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_9_nots_processed_in_batch/"
-  - "/home/fengruitao/rt_nas/data/processed_aishell/train/"
-  # - "/home/fengruitao/rt_nas/data/processed_aishell_test/train/"
+  - "/home/fengruitao/rt_nas/data/processed_aishell_test/train/"
 
 audio_column: "audio"
 text_column: "text"
@@ -65,6 +53,7 @@ filter_dataset: true
 # Textual Prompt Configuration
 # textual_prompt: "请转写以下音频内容为文字："  # Chinese prompt for ASR task
 textual_prompt: "请逐字复述音频内容为文字: "  # Chinese prompt for ASR task
+# textual_prompt: "转录文字，兼顾专有名词: "  # Chinese prompt for ASR task
 
 # Model Configuration
 max_prompt_tokens: 2048

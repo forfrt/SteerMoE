@@ -528,16 +528,7 @@ class SteerMoEEfficientLayerWiseModelForConformer(nn.Module):
     def get_device(self):
         return next(self.parameters()).device
 
-    @property
-    def device(self):
-        try:
-            return next(self.parameters()).device
-        except StopIteration:
-            if hasattr(self, 'whisper_encoder') and self.conformer_encoder:
-                return next(self.conformer_encoder.parameters()).device
-            if hasattr(self, 'llm_decoder') and self.llm_decoder:
-                return next(self.llm_decoder.parameters()).device
-            return torch.device("cpu")
+
         
 
 

@@ -26,7 +26,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from steer_moe.models import SteerMoEEfficientLayerWiseModel
+from steer_moe.models import SteerMoEEfficientLayerWiseModel,SteerMoEEfficientLayerWiseModelForConformer
 from steer_moe.efficient_layer_wise_whisper import EfficientLayerWiseSteeringWhisperEncoder
 from steer_moe.utils import load_parquet_datasets, prepare_dataset, DataCollatorSpeechSeqSeqWithPadding
 from steer_moe.tokenizer.whisper_Lv3.whisper import WhisperEncoder
@@ -86,8 +86,8 @@ def filter_dataset_by_length(dataset: DatasetDict, max_audio_length: float = 30.
 
 def compute_metrics(pred):
     """Compute CER and WER for evaluation."""
-    cer_metric = load_metric('cer')
-    wer_metric = load_metric('wer')
+    cer_metric = load_metric('./cer.py')
+    wer_metric = load_metric('./wer.py')
     pred_str = pred.predictions
     label_str = pred.label_ids
     cer = cer_metric.compute(predictions=pred_str, references=label_str)
@@ -252,7 +252,10 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
     # Set model to training mode
     model.train()
 
-    # Load dataset
+    # Load dataset #TODO eliminate 
+    '''
+    ----------------------------------------------------------
+    '''
     print("Loading dataset...")
     parquet_dirs = config.get('parquet_dirs', [])
     batch_size = config['training']['batch_size']
@@ -295,11 +298,15 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         split_dataset = processed_dataset.train_test_split(test_size=0.05, seed=42)
         processed_val = split_dataset['test']
         processed_dataset = split_dataset['train']
+    '''
+    ----------------------------------------------------------
+    '''
 
     # Create data collator for preprocessed data
     textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")  # Default Chinese prompt
     max_length = config.get('max_text_length', 1024)
-    
+
+
     # Create data collator with fixed max length for consistent evaluation
     data_collator = DataCollatorSpeechSeqSeqWithPadding(
         feature_extractor=feature_extractor,
@@ -337,8 +344,8 @@ def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
         
             if len(pred_str) > 0 and len(label_str) > 0:
                 try:
-                    cer_metric = load_metric('cer')
-                    wer_metric = load_metric('wer')
+                    cer_metric = load_metric('./scripts/cer.py')
+                    wer_metric = load_metric('./scripts/wer.py')
                     cer = cer_metric.compute(predictions=pred_str, references=label_str)
                     wer = wer_metric.compute(predictions=pred_str, references=label_str)
                     return {"cer": cer, "wer": wer}
@@ -612,8 +619,8 @@ def evaluate_layer_wise_model(model_path: str, eval_dataset_name: str, config_pa
 
     # Now compute metrics on all the decoded strings
     print("Computing final metrics...")
-    cer_metric = load_metric('cer')
-    wer_metric = load_metric('wer')
+    cer_metric = load_metric('./scripts/cer.py')
+    wer_metric = load_metric('./scripts/wer.py')
     
     cer = cer_metric.compute(predictions=all_preds, references=all_labels)
     wer = wer_metric.compute(predictions=all_preds, references=all_labels)

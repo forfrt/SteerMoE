@@ -74,6 +74,7 @@ Acknowledgements	steer_moe/tokenizer/glm4/README_en.md	/^## Acknowledgements$/;"
 Acknowledgements	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/README.md	/^## Acknowledgements$/;"	s	chapter:🍵 Matcha-TTS: A fast TTS architecture with conditional flow matching
 Acknowledgements	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/README.md	/^## Acknowledgements$/;"	s	chapter:HiFi-GAN: Generative Adversarial Networks for Efficient and High Fidelity Speech Synthesis
 AdaRMSNorm	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^class AdaRMSNorm(nn.Module):$/;"	c
+Adapter	steer_moe/conformer_module/adapter.py	/^class Adapter(nn.Module):$/;"	c
 Advanced Training with Evaluation	README.md	/^### Advanced Training with Evaluation$/;"	S	section:SteerMoE""Training
 Advantages of Current Implementation	steer_moe/current_implementation_analysis.md	/^## Advantages of Current Implementation$/;"	s	chapter:Current SteerMoE Implementation Analysis
 Aligner Mechanics	README.md	/^## Aligner Mechanics$/;"	s	chapter:SteerMoE
@@ -127,8 +128,11 @@ Configuration	README.md	/^## Configuration$/;"	s	chapter:SteerMoE
 Configuration	steer_moe/implementation_summary.md	/^### Configuration$/;"	S	section:SteerMoE Current Implementation Summary""Training Process
 Configuration Guidelines	TRAINING_PROCEDURE_REVIEW.md	/^## Configuration Guidelines$/;"	s	chapter:SteerMoE Training Procedure Review and Updates
 Configuration Parameters:	TRAINING_PROCEDURE_REVIEW.md	/^#### Configuration Parameters:$/;"	t	subsection:SteerMoE Training Procedure Review and Updates""Major Updates""2. Enhanced Data Collator (`DataCollatorSpeechSeqSeqWithPadding`)
+ConformerConvolution	steer_moe/conformer_module/conformer_encoder.py	/^class ConformerConvolution(nn.Module):$/;"	c
+ConformerEncoder	steer_moe/conformer_module/conformer_encoder.py	/^class ConformerEncoder(nn.Module):$/;"	c
 ConformerEncoder	steer_moe/tokenizer/glm4/cosyvoice/transformer/encoder.py	/^class ConformerEncoder(BaseEncoder):$/;"	c
 ConformerEncoderLayer	steer_moe/tokenizer/glm4/cosyvoice/transformer/encoder_layer.py	/^class ConformerEncoderLayer(nn.Module):$/;"	c
+ConformerFeedForward	steer_moe/conformer_module/conformer_encoder.py	/^class ConformerFeedForward(nn.Module):$/;"	c
 ConformerModule	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer.py	/^class ConformerModule(nn.Module):$/;"	c
 ConformerModule	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer_use_mask.py	/^class ConformerModule(nn.Module):$/;"	c
 ConformerWrapper	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/components/decoder.py	/^class ConformerWrapper(ConformerBlock):$/;"	c
@@ -138,6 +142,7 @@ ContinuousTransformer	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer
 ContinuousTransformer_mask	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/dit.py	/^from .transformer_use_mask import ContinuousTransformer as ContinuousTransformer_mask$/;"	x	nameref:unknown:ContinuousTransformer
 Conv1d	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^class Conv1d(nn.Conv1d):$/;"	c
 Conv1dSubsampling2	steer_moe/tokenizer/glm4/cosyvoice/transformer/subsampling.py	/^class Conv1dSubsampling2(BaseSubsampling):$/;"	c
+Conv2dSubsampling	steer_moe/conformer_module/conformer_encoder.py	/^class Conv2dSubsampling(nn.Module):$/;"	c
 Conv2dSubsampling4	steer_moe/tokenizer/glm4/cosyvoice/transformer/subsampling.py	/^class Conv2dSubsampling4(BaseSubsampling):$/;"	c
 Conv2dSubsampling6	steer_moe/tokenizer/glm4/cosyvoice/transformer/subsampling.py	/^class Conv2dSubsampling6(BaseSubsampling):$/;"	c
 Conv2dSubsampling8	steer_moe/tokenizer/glm4/cosyvoice/transformer/subsampling.py	/^class Conv2dSubsampling8(BaseSubsampling):$/;"	c
@@ -174,7 +179,10 @@ DatasetCommonVoiceCN	whisper_train/data_process.py	/^class DatasetCommonVoiceCN(
 DatasetCommonVoiceHindi	whisper_train/data_process.py	/^class DatasetCommonVoiceHindi(object):$/;"	c
 DatasetFinAudioCN	whisper_train/data_process.py	/^class DatasetFinAudioCN(DatasetCommonVoiceHindi):$/;"	c
 Decoder	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/components/decoder.py	/^class Decoder(nn.Module):$/;"	c
+DecoderLayer	steer_moe/conformer_module/transformer_decoder.py	/^class DecoderLayer(nn.Module):$/;"	c
 DecoderLayer	steer_moe/tokenizer/glm4/cosyvoice/transformer/decoder_layer.py	/^class DecoderLayer(nn.Module):$/;"	c
+DecoderMultiHeadAttention	steer_moe/conformer_module/transformer_decoder.py	/^class DecoderMultiHeadAttention(nn.Module):$/;"	c
+DecoderScaledDotProductAttention	steer_moe/conformer_module/transformer_decoder.py	/^class DecoderScaledDotProductAttention(nn.Module):$/;"	c
 Denoiser	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/denoiser.py	/^class Denoiser(torch.nn.Module):$/;"	c
 Detailed Workflow:	steer_moe/current_implementation_analysis.md	/^### Detailed Workflow:$/;"	S	section:Current SteerMoE Implementation Analysis""Workflow Summary
 Did you have fun?	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/.github/PULL_REQUEST_TEMPLATE.md	/^## Did you have fun?$/;"	s
@@ -190,10 +198,12 @@ Downsample1d	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^class Do
 Downsample1d_2	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^def Downsample1d_2($/;"	f	typeref:typename:nn.Module
 DownsampleBlock1d	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^class DownsampleBlock1d(nn.Module):$/;"	c
 DurationPredictor	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/components/text_encoder.py	/^class DurationPredictor(nn.Module):$/;"	c
+EfficientLayerWiseSteeringConformerEncoder	steer_moe/efficient_layer_wise_conformer.py	/^class EfficientLayerWiseSteeringConformerEncoder(nn.Module):$/;"	c
 EfficientLayerWiseSteeringWhisperEncoder	steer_moe/efficient_layer_wise_whisper.py	/^class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):$/;"	c
 EmbedinigNoSubsampling	steer_moe/tokenizer/glm4/cosyvoice/transformer/subsampling.py	/^class EmbedinigNoSubsampling(BaseSubsampling):$/;"	c
 EnNormalizer	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    from tn.english.normalizer import Normalizer as EnNormalizer$/;"	x	nameref:unknown:Normalizer
 Encoder	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/components/text_encoder.py	/^class Encoder(nn.Module):$/;"	c
+EncoderMultiHeadAttention	steer_moe/conformer_module/conformer_encoder.py	/^class EncoderMultiHeadAttention(nn.Module):$/;"	c
 Enhanced Dataset Handling:	TRAINING_PROCEDURE_REVIEW.md	/^#### Enhanced Dataset Handling:$/;"	t	subsection:SteerMoE Training Procedure Review and Updates""Major Updates""3. Improved Training Script (`train_layer_wise.py`)
 EspnetRelPositionalEncoding	steer_moe/tokenizer/glm4/cosyvoice/transformer/embedding.py	/^class EspnetRelPositionalEncoding(torch.nn.Module):$/;"	c
 Essential Parameters	TRAINING_PROCEDURE_REVIEW.md	/^### Essential Parameters$/;"	S	section:SteerMoE Training Procedure Review and Updates""Configuration Guidelines
@@ -206,6 +216,9 @@ Expected Training Behavior	TRAINING_PROCEDURE_REVIEW.md	/^## Expected Training B
 F	cross_modal_steer/cross_modal_steering.py	/^import torch.nn.functional as F$/;"	I	nameref:module:torch.nn.functional
 F	cross_modal_steer/router_comparison.py	/^import torch.nn.functional as F$/;"	I	nameref:module:torch.nn.functional
 F	steer_moe/aligner.py	/^import torch.nn.functional as F$/;"	I	nameref:module:torch.nn.functional
+F	steer_moe/conformer_module/conformer_encoder.py	/^import torch.nn.functional as F$/;"	I	nameref:module:torch.nn.functional
+F	steer_moe/conformer_module/transformer_decoder.py	/^import torch.nn.functional as F$/;"	I	nameref:module:torch.nn.functional
+F	steer_moe/efficient_layer_wise_conformer.py	/^import torch.nn.functional as F$/;"	I	nameref:module:torch.nn.functional
 F	steer_moe/efficient_layer_wise_whisper.py	/^import torch.nn.functional as F$/;"	I	nameref:module:torch.nn.functional
 F	steer_moe/layer_wise_aligner.py	/^import torch.nn.functional as F$/;"	I	nameref:module:torch.nn.functional
 F	steer_moe/layer_wise_whisper.py	/^import torch.nn.functional as F$/;"	I	nameref:module:torch.nn.functional
@@ -238,6 +251,7 @@ FeedForward	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer.py	/^clas
 FeedForward	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer_use_mask.py	/^class FeedForward(nn.Module):$/;"	c
 FeedForward	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/components/transformer.py	/^class FeedForward(nn.Module):$/;"	c
 Fine-Tuning	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/README.md	/^## Fine-Tuning$/;"	s	chapter:HiFi-GAN: Generative Adversarial Networks for Efficient and High Fidelity Speech Synthesis
+FireRedAsrAed	steer_moe/fireredasr_aed.py	/^class FireRedAsrAed(torch.nn.Module):$/;"	c
 FixedEmbedding	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^class FixedEmbedding(nn.Module):$/;"	c
 For Cross-Modal Alignment:	cross_modal_steer/router_analysis_and_cross_modal_steering.md	/^### For Cross-Modal Alignment:$/;"	S	section:Router Implementation Analysis and Cross-Modal Steering Analysis""3. Recommendations
 For Layer-Wise Steering:	cross_modal_steer/router_analysis_and_cross_modal_steering.md	/^### For Layer-Wise Steering:$/;"	S	section:Router Implementation Analysis and Cross-Modal Steering Analysis""3. Recommendations
@@ -297,6 +311,7 @@ Limitations and Considerations	steer_moe/implementation_summary.md	/^## Limitati
 LinearGEGLU	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^class LinearGEGLU(nn.Linear):$/;"	c
 LinearNoSubsampling	steer_moe/tokenizer/glm4/cosyvoice/transformer/subsampling.py	/^class LinearNoSubsampling(BaseSubsampling):$/;"	c
 Load Model	README.md	/^### Load Model$/;"	S	section:SteerMoE""Model Saving and Loading
+LoadConformerEncoder	steer_moe/efficient_layer_wise_conformer.py	/^class LoadConformerEncoder(nn.Module):$/;"	c
 Logged_Seq2SeqTrainer	whisper_train/main_word_correct_clips.py	/^class Logged_Seq2SeqTrainer(Logged_Traniner):$/;"	c
 Logged_Traniner	whisper_train/main_word_correct_clips.py	/^class Logged_Traniner(Trainer):$/;"	c
 MATCHA_TTS_LOC	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/app.py	/^def MATCHA_TTS_LOC(x):$/;"	f
@@ -352,7 +367,9 @@ Phase 1: Model Initialization	TRAINING_PROCEDURE_REVIEW.md	/^### Phase 1: Model 
 Phase 2: Dataset Preparation	TRAINING_PROCEDURE_REVIEW.md	/^### Phase 2: Dataset Preparation$/;"	S	section:SteerMoE Training Procedure Review and Updates""Training Procedure Breakdown
 Phase 3: Training Loop	TRAINING_PROCEDURE_REVIEW.md	/^### Phase 3: Training Loop$/;"	S	section:SteerMoE Training Procedure Review and Updates""Training Procedure Breakdown
 Phase 4: Evaluation and Analysis	TRAINING_PROCEDURE_REVIEW.md	/^### Phase 4: Evaluation and Analysis$/;"	S	section:SteerMoE Training Procedure Review and Updates""Training Procedure Breakdown
+PositionalEncoding	steer_moe/conformer_module/transformer_decoder.py	/^class PositionalEncoding(nn.Module):$/;"	c
 PositionalEncoding	steer_moe/tokenizer/glm4/cosyvoice/transformer/embedding.py	/^class PositionalEncoding(torch.nn.Module):$/;"	c
+PositionwiseFeedForward	steer_moe/conformer_module/transformer_decoder.py	/^class PositionwiseFeedForward(nn.Module):$/;"	c
 PositionwiseFeedForward	steer_moe/tokenizer/glm4/cosyvoice/transformer/positionwise_feed_forward.py	/^class PositionwiseFeedForward(torch.nn.Module):$/;"	c
 Pre-requisites	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/README.md	/^## Pre-requisites$/;"	s	chapter:HiFi-GAN: Generative Adversarial Networks for Efficient and High Fidelity Speech Synthesis
 Preparation	steer_moe/tokenizer/glm4/README.md	/^### Preparation$/;"	S	section:GLM-4-Voice""Usage
@@ -369,7 +386,10 @@ RADIO_OPTIONS	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/app.py	/^RA
 README	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/setup.py	/^    README = readme_file.read()$/;"	v
 RMSNorm	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^class RMSNorm(nn.Module):$/;"	c
 Recommendations for Training Updates	steer_moe/current_implementation_analysis.md	/^## Recommendations for Training Updates$/;"	s	chapter:Current SteerMoE Implementation Analysis
+RelPosEmbConformerBlock	steer_moe/conformer_module/conformer_encoder.py	/^class RelPosEmbConformerBlock(nn.Module):$/;"	c
+RelPosMultiHeadAttention	steer_moe/conformer_module/conformer_encoder.py	/^class RelPosMultiHeadAttention(EncoderMultiHeadAttention):$/;"	c
 RelPositionMultiHeadedAttention	steer_moe/tokenizer/glm4/cosyvoice/transformer/attention.py	/^class RelPositionMultiHeadedAttention(MultiHeadedAttention):$/;"	c
+RelPositionalEncoding	steer_moe/conformer_module/conformer_encoder.py	/^class RelPositionalEncoding(torch.nn.Module):$/;"	c
 RelPositionalEncoding	steer_moe/tokenizer/glm4/cosyvoice/transformer/embedding.py	/^class RelPositionalEncoding(PositionalEncoding):$/;"	c
 ResBlock	steer_moe/tokenizer/glm4/cosyvoice/hifigan/generator.py	/^class ResBlock(torch.nn.Module):$/;"	c
 ResBlock1	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/models.py	/^class ResBlock1(torch.nn.Module):$/;"	c
@@ -393,6 +413,7 @@ STFT	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^class STFT(nn.Modul
 Save Model	README.md	/^### Save Model$/;"	S	section:SteerMoE""Model Saving and Loading
 SavePeftModelCallback	whisper_train/main_word_correct_clips.py	/^    class SavePeftModelCallback(TrainerCallback):$/;"	c	function:train_lora	file:
 SavePeftModelCallback	whisper_train/main_word_correct_clips.py	/^    class SavePeftModelCallback(TrainerCallback):$/;"	c	function:train_lora_in_8bit	file:
+ScaledDotProductAttention	steer_moe/conformer_module/conformer_encoder.py	/^class ScaledDotProductAttention(nn.Module):$/;"	c
 ScaledSinusoidalEmbedding	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer.py	/^class ScaledSinusoidalEmbedding(nn.Module):$/;"	c
 ScaledSinusoidalEmbedding	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer_use_mask.py	/^class ScaledSinusoidalEmbedding(nn.Module):$/;"	c
 SelfAttention1d	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^class SelfAttention1d(nn.Module):$/;"	c
@@ -416,11 +437,17 @@ SteerMoE Current Implementation Summary	steer_moe/implementation_summary.md	/^# 
 SteerMoE Training Procedure Review and Updates	TRAINING_PROCEDURE_REVIEW.md	/^# SteerMoE Training Procedure Review and Updates$/;"	c
 SteerMoEAligner	steer_moe/aligner.py	/^class SteerMoEAligner(nn.Module):$/;"	c
 SteerMoEEfficientLayerWiseModel	steer_moe/models.py	/^class SteerMoEEfficientLayerWiseModel(nn.Module):$/;"	c
+SteerMoEEfficientLayerWiseModel	steer_moe/models_zhangbixi_tmp.py	/^class SteerMoEEfficientLayerWiseModel(nn.Module):$/;"	c
+SteerMoEEfficientLayerWiseModelForConformer	steer_moe/models.py	/^class SteerMoEEfficientLayerWiseModelForConformer(nn.Module):$/;"	c
 SteerMoEHybridModel	steer_moe/models.py	/^class SteerMoEHybridModel(nn.Module):$/;"	c
+SteerMoEHybridModel	steer_moe/models_zhangbixi_tmp.py	/^class SteerMoEHybridModel(nn.Module):$/;"	c
 SteerMoELayerWiseModel	steer_moe/models.py	/^class SteerMoELayerWiseModel(nn.Module):$/;"	c
+SteerMoELayerWiseModel	steer_moe/models_zhangbixi_tmp.py	/^class SteerMoELayerWiseModel(nn.Module):$/;"	c
 SteerMoEModel	steer_moe/models.py	/^class SteerMoEModel(nn.Module):$/;"	c
+SteerMoEModel	steer_moe/models_zhangbixi_tmp.py	/^class SteerMoEModel(nn.Module):$/;"	c
 Steering Analysis	steer_moe/implementation_summary.md	/^### Steering Analysis$/;"	S	section:SteerMoE Current Implementation Summary""Monitoring and Analysis
 SteeringAnalysisCallback	scripts/train_layer_wise.py	/^class SteeringAnalysisCallback(TrainerCallback):$/;"	c
+Swish	steer_moe/conformer_module/conformer_encoder.py	/^class Swish(nn.Module):$/;"	c
 Swish	steer_moe/tokenizer/glm4/cosyvoice/transformer/activation.py	/^class Swish(torch.nn.Module):$/;"	c
 T	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^T = TypeVar("T")$/;"	v
 TRAINER_STATE_NAME	whisper_train/main_word_correct_clips.py	/^TRAINER_STATE_NAME = "trainer_state.json"$/;"	v
@@ -449,6 +476,7 @@ Transformer1d	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^class Tran
 TransformerBlock	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^class TransformerBlock(nn.Module):$/;"	c
 TransformerBlock	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer.py	/^class TransformerBlock(nn.Module):$/;"	c
 TransformerBlock	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/transformer_use_mask.py	/^class TransformerBlock(nn.Module):$/;"	c
+TransformerDecoder	steer_moe/conformer_module/transformer_decoder.py	/^class TransformerDecoder(nn.Module):$/;"	c
 TransformerDecoder	steer_moe/tokenizer/glm4/cosyvoice/transformer/decoder.py	/^class TransformerDecoder(torch.nn.Module):$/;"	c
 TransformerEncoder	steer_moe/tokenizer/glm4/cosyvoice/transformer/encoder.py	/^class TransformerEncoder(BaseEncoder):$/;"	c
 TransformerEncoderLayer	steer_moe/tokenizer/glm4/cosyvoice/transformer/encoder_layer.py	/^class TransformerEncoderLayer(nn.Module):$/;"	c
@@ -542,15 +570,39 @@ __init__	scripts/train_layer_wise.py	/^    def __init__(self, max_norm: float = 
 __init__	scripts/train_layer_wise.py	/^    def __init__(self, model, log_interval: int = 100):$/;"	m	class:SteeringAnalysisCallback
 __init__	steer_moe/al_models.py	/^    def __init__(self, encoder, decoder, encoder_dim, decoder_dim, use_adapter=True):$/;"	m	class:AudioToText
 __init__	steer_moe/aligner.py	/^    def __init__(self, feature_dim, num_experts):$/;"	m	class:SteerMoEAligner
+__init__	steer_moe/conformer_module/adapter.py	/^    def __init__(self, encoder_dim, llm_dim, downsample_rate=2):$/;"	m	class:Adapter
+__init__	steer_moe/conformer_module/conformer_encoder.py	/^    def __init__(self, d_model, dropout_rate=0.1):$/;"	m	class:ConformerFeedForward
+__init__	steer_moe/conformer_module/conformer_encoder.py	/^    def __init__(self, d_model, kernel_size=33, dropout_rate=0.1):$/;"	m	class:ConformerConvolution
+__init__	steer_moe/conformer_module/conformer_encoder.py	/^    def __init__(self, d_model, max_len=5000):$/;"	m	class:RelPositionalEncoding
+__init__	steer_moe/conformer_module/conformer_encoder.py	/^    def __init__(self, d_model, n_head,$/;"	m	class:RelPosEmbConformerBlock
+__init__	steer_moe/conformer_module/conformer_encoder.py	/^    def __init__(self, idim, d_model, out_channels=32):$/;"	m	class:Conv2dSubsampling
+__init__	steer_moe/conformer_module/conformer_encoder.py	/^    def __init__(self, idim, n_layers, n_head, d_model,$/;"	m	class:ConformerEncoder
+__init__	steer_moe/conformer_module/conformer_encoder.py	/^    def __init__(self, n_head, d_model,$/;"	m	class:EncoderMultiHeadAttention
+__init__	steer_moe/conformer_module/conformer_encoder.py	/^    def __init__(self, n_head, d_model,$/;"	m	class:RelPosMultiHeadAttention
+__init__	steer_moe/conformer_module/conformer_encoder.py	/^    def __init__(self, temperature):$/;"	m	class:ScaledDotProductAttention
+__init__	steer_moe/conformer_module/transformer_decoder.py	/^    def __init__($/;"	m	class:TransformerDecoder
+__init__	steer_moe/conformer_module/transformer_decoder.py	/^    def __init__(self, d_model, d_ff, dropout=0.1):$/;"	m	class:PositionwiseFeedForward
+__init__	steer_moe/conformer_module/transformer_decoder.py	/^    def __init__(self, d_model, max_len=5000):$/;"	m	class:PositionalEncoding
+__init__	steer_moe/conformer_module/transformer_decoder.py	/^    def __init__(self, d_model, n_head, dropout):$/;"	m	class:DecoderLayer
+__init__	steer_moe/conformer_module/transformer_decoder.py	/^    def __init__(self, d_model, n_head, dropout=0.1):$/;"	m	class:DecoderMultiHeadAttention
+__init__	steer_moe/conformer_module/transformer_decoder.py	/^    def __init__(self, temperature):$/;"	m	class:DecoderScaledDotProductAttention
+__init__	steer_moe/efficient_layer_wise_conformer.py	/^    def __init__(self, conformer_encoder_path, freeze = True):$/;"	m	class:LoadConformerEncoder
+__init__	steer_moe/efficient_layer_wise_conformer.py	/^    def __init__(self, conformer_encoder_path, num_experts: int = 8, steering_scale: float = 0.1/;"	m	class:EfficientLayerWiseSteeringConformerEncoder
 __init__	steer_moe/efficient_layer_wise_whisper.py	/^    def __init__(self, original_whisper_encoder, num_experts: int = 8, steering_scale: float = 0/;"	m	class:SharedRouterLayerWiseSteeringWhisperEncoder
 __init__	steer_moe/efficient_layer_wise_whisper.py	/^    def __init__(self, whisper_encoder_path, num_experts: int = 8, steering_scale: float = 0.1):$/;"	m	class:EfficientLayerWiseSteeringWhisperEncoder
+__init__	steer_moe/fireredasr_aed.py	/^    def __init__(self, args):$/;"	m	class:FireRedAsrAed
 __init__	steer_moe/layer_wise_aligner.py	/^    def __init__(self, feature_dim: int, num_experts: int, num_layers: int = 32):$/;"	m	class:LayerWiseSteerMoEAligner
 __init__	steer_moe/layer_wise_aligner.py	/^    def __init__(self, whisper_encoder, aligner: LayerWiseSteerMoEAligner):$/;"	m	class:WhisperEncoderWithSteering
 __init__	steer_moe/layer_wise_whisper.py	/^    def __init__(self, original_whisper_encoder, num_experts: int = 8, steering_scale: float = 0/;"	m	class:LayerWiseSteeringWhisperEncoder
+__init__	steer_moe/models.py	/^    def __init__(self, conformer_encoder_path, llm_decoder, num_experts=8, $/;"	m	class:SteerMoEEfficientLayerWiseModelForConformer
 __init__	steer_moe/models.py	/^    def __init__(self, whisper_encoder, aligner, llm_decoder):$/;"	m	class:SteerMoEModel
 __init__	steer_moe/models.py	/^    def __init__(self, whisper_encoder, aligner, llm_decoder, prompt_proj=None, $/;"	m	class:SteerMoEHybridModel
 __init__	steer_moe/models.py	/^    def __init__(self, whisper_encoder, llm_decoder, num_experts=8, $/;"	m	class:SteerMoEEfficientLayerWiseModel
 __init__	steer_moe/models.py	/^    def __init__(self, whisper_encoder_path, llm_decoder, num_experts=8, $/;"	m	class:SteerMoELayerWiseModel
+__init__	steer_moe/models_zhangbixi_tmp.py	/^    def __init__(self, whisper_encoder, aligner, llm_decoder):$/;"	m	class:SteerMoEModel
+__init__	steer_moe/models_zhangbixi_tmp.py	/^    def __init__(self, whisper_encoder, aligner, llm_decoder, prompt_proj=None, $/;"	m	class:SteerMoEHybridModel
+__init__	steer_moe/models_zhangbixi_tmp.py	/^    def __init__(self, whisper_encoder, llm_decoder, num_experts=8, $/;"	m	class:SteerMoEEfficientLayerWiseModel
+__init__	steer_moe/models_zhangbixi_tmp.py	/^    def __init__(self, whisper_encoder_path, llm_decoder, num_experts=8, $/;"	m	class:SteerMoELayerWiseModel
 __init__	steer_moe/shared_router_implementation.py	/^    def __init__(self, original_whisper_encoder, num_experts: int = 8, steering_scale: float = 0/;"	m	class:MultipleRoutersLayerWiseSteeringWhisperEncoder
 __init__	steer_moe/shared_router_implementation.py	/^    def __init__(self, original_whisper_encoder, num_experts: int = 8, steering_scale: float = 0/;"	m	class:SharedRouterLayerWiseSteeringWhisperEncoder
 __init__	steer_moe/tokenizer/glm4/audio_process.py	/^    def __init__(self, sr=22050, min_silence_duration=0.1, threshold_db=-40):$/;"	m	class:AudioStreamProcessor
@@ -785,6 +837,7 @@ _find_silence_boundary	steer_moe/tokenizer/glm4/audio_process.py	/^    def _find
 _find_silence_end	steer_moe/tokenizer/glm4/audio_process.py	/^    def _find_silence_end(self, start_point):$/;"	m	class:AudioStreamProcessor
 _forward	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/dit.py	/^    def _forward($/;"	m	class:DiffusionTransformer
 _forward	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/dit_v2.py	/^    def _forward($/;"	m	class:DiffusionTransformerV2
+_forward_with_steering	steer_moe/efficient_layer_wise_conformer.py	/^    def _forward_with_steering(self, mel_features, input_lengths, pad=True,return_full_output=Fa/;"	m	class:EfficientLayerWiseSteeringConformerEncoder
 _forward_with_steering	steer_moe/efficient_layer_wise_whisper.py	/^    def _forward_with_steering(self, mel_features, return_gating=False):$/;"	m	class:EfficientLayerWiseSteeringWhisperEncoder
 _freeze_parameters	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def _freeze_parameters(self):$/;"	m	class:WhisperVQEncoder
 _freeze_parameters	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def _freeze_parameters(self):$/;"	m	class:WhisperEncoder
@@ -795,6 +848,7 @@ _get_constant_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def
 _get_feat_extract_output_lengths	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def _get_feat_extract_output_lengths(self, input_lengths: torch.LongTensor):$/;"	m	class:WhisperPreTrainedModel
 _get_feat_extract_output_lengths	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def _get_feat_extract_output_lengths(self, input_lengths: torch.LongTensor):$/;"	m	class:WhisperPreTrainedModel
 _get_input_segment	steer_moe/tokenizer/glm4/speech_tokenizer/generation_whisper.py	/^    def _get_input_segment(input_features, seek, seek_num_frames, num_segment_frames, cur_bsz, b/;"	m	class:WhisperGenerationMixin
+_get_layers	steer_moe/efficient_layer_wise_conformer.py	/^def _get_layers(encoder):$/;"	f
 _get_layers	steer_moe/efficient_layer_wise_whisper.py	/^def _get_layers(encoder):$/;"	f
 _get_linear_warmup_with_cosine_annealing_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def _get_linear_warmup_with_cosine_annealing_lr(self, step):$/;"	m	class:CosineAnnealing
 _get_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def _get_lr(self, step):$/;"	m	class:CosineAnnealing
@@ -804,6 +858,7 @@ _get_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def _get_lr(
 _get_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def _get_lr(self, step):$/;"	m	class:SquareRootConstantPolicy
 _get_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def _get_lr(self, step):$/;"	m	class:WarmupAnnealHoldPolicy
 _get_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def _get_lr(self, step):$/;"	m	class:WarmupPolicy
+_get_num_layers	steer_moe/efficient_layer_wise_conformer.py	/^def _get_num_layers(encoder):$/;"	f
 _get_num_layers	steer_moe/efficient_layer_wise_whisper.py	/^def _get_num_layers(encoder):$/;"	f
 _get_warmup_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def _get_warmup_lr(self, step):$/;"	m	class:CosineAnnealing
 _get_warmup_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/scheduler.py	/^    def _get_warmup_lr(self, step):$/;"	m	class:WarmupAnnealHoldPolicy
@@ -849,6 +904,7 @@ _prepare_decoder_attention_mask	steer_moe/tokenizer/whisper_Lv3/modeling_whisper
 _prepare_decoder_input_ids	steer_moe/tokenizer/glm4/speech_tokenizer/generation_whisper.py	/^    def _prepare_decoder_input_ids($/;"	m	class:WhisperGenerationMixin
 _prepare_segments	steer_moe/tokenizer/glm4/speech_tokenizer/generation_whisper.py	/^    def _prepare_segments(prompt_ids, batch_size, generation_config):$/;"	m	class:WhisperGenerationMixin
 _punctuation	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/symbols.py	/^_punctuation = ';:,.!?¡¿—…"«»“” '$/;"	v
+_rel_shift	steer_moe/conformer_module/conformer_encoder.py	/^    def _rel_shift(self, x):$/;"	m	class:RelPosMultiHeadAttention
 _remote_forward	tmpx07ntkc2/_remote_module_non_scriptable.py	/^def _remote_forward($/;"	f
 _remove_commas	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/numbers.py	/^def _remove_commas(m):$/;"	f
 _reorder_cache	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def _reorder_cache(past_key_values, beam_idx):$/;"	m	class:WhisperForCausalLM
@@ -935,6 +991,7 @@ batch	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^def batch(data, 
 batch	whisper_train/pre_process_word_correct_data.py	/^        batch = [os.path.join(ori_parquet_dir,file) for file in batch]$/;"	v
 batch	whisper_train/pre_process_word_correct_data.py	/^        batch = train_files[i:i+batch_size]$/;"	v
 batch_backward	steer_moe/tokenizer/glm4/cosyvoice/utils/train_utils.py	/^def batch_backward(model, info_dict):$/;"	f
+batch_beam_search	steer_moe/conformer_module/transformer_decoder.py	/^    def batch_beam_search(self, encoder_outputs, src_masks,$/;"	m	class:TransformerDecoder
 batch_dict	whisper_train/generate_raw_parquet_multi_processing_word.py	/^    batch_dict = defaultdict(list)$/;"	v
 batch_forward	steer_moe/tokenizer/glm4/cosyvoice/utils/train_utils.py	/^def batch_forward(model, batch, info_dict):$/;"	f
 batch_infer	scripts/batch_infer.py	/^def batch_infer($/;"	f
@@ -951,6 +1008,7 @@ bf16	configs/stage3.json	/^  "bf16": {$/;"	o
 build_env	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/env.py	/^def build_env(config, config_name, path):$/;"	f
 calc_utt_length	steer_moe/tokenizer/glm4/cosyvoice/utils/frontend_utils.py	/^    def calc_utt_length(_text: str):$/;"	f	function:split_paragraph	file:
 casual_train	steer_moe/models.py	/^def casual_train():$/;"	f
+casual_train	steer_moe/models_zhangbixi_tmp.py	/^def casual_train():$/;"	f
 causal_mask	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/adp.py	/^def causal_mask(q: Tensor, k: Tensor) -> Tensor:$/;"	f	typeref:typename:Tensor
 chatbot	steer_moe/tokenizer/glm4/web_demo.py	/^        chatbot = gr.Chatbot($/;"	v
 check_modify_and_save_config	steer_moe/tokenizer/glm4/cosyvoice/utils/train_utils.py	/^def check_modify_and_save_config(args, configs):$/;"	f
@@ -1040,8 +1098,12 @@ device	configs/stage3.json	/^      "device": "cpu",$/;"	s	object:zero_optimizati
 device	configs/stage3.json	/^      "device": "cpu",$/;"	s	object:zero_optimization.offload_param
 device	steer_moe/al_models.py	/^    def device(self):$/;"	m	class:AudioToText
 device	steer_moe/models.py	/^    def device(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
+device	steer_moe/models.py	/^    def device(self):$/;"	m	class:SteerMoEEfficientLayerWiseModelForConformer
 device	steer_moe/models.py	/^    def device(self):$/;"	m	class:SteerMoEHybridModel
 device	steer_moe/models.py	/^    def device(self):$/;"	m	class:SteerMoELayerWiseModel
+device	steer_moe/models_zhangbixi_tmp.py	/^    def device(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
+device	steer_moe/models_zhangbixi_tmp.py	/^    def device(self):$/;"	m	class:SteerMoEHybridModel
+device	steer_moe/models_zhangbixi_tmp.py	/^    def device(self):$/;"	m	class:SteerMoELayerWiseModel
 device	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/app.py	/^device = get_device(args)$/;"	v
 device	steer_moe/tokenizer/glm4/web_demo.py	/^    device = "cuda"$/;"	v
 df	whisper_train/pre_process_word_correct_data.py	/^            df = pd.read_csv(f'{processed_status_dir}{f}')$/;"	v
@@ -1108,6 +1170,7 @@ extra_repr	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^    def ex
 extra_repr	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^    def extra_repr(self):$/;"	m	class:RMSNorm
 extract_speech_token	steer_moe/tokenizer/glm4/speech_tokenizer/utils.py	/^def extract_speech_token(model: WhisperVQEncoder, feature_extractor: WhisperFeatureExtractor, ut/;"	f
 extract_whisper_feat	steer_moe/models.py	/^def extract_whisper_feat(self, wav: torch.Tensor | str):$/;"	f
+extract_whisper_feat	steer_moe/models_zhangbixi_tmp.py	/^def extract_whisper_feat(self, wav: torch.Tensor | str):$/;"	f
 extras	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/utils.py	/^def extras(cfg: DictConfig) -> None:$/;"	f	typeref:typename:None
 exts	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/setup.py	/^exts = [$/;"	v
 fa3_func	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^        flash_attn_func as fa3_func,$/;"	x	nameref:unknown:flash_attn_func
@@ -1150,6 +1213,22 @@ forward	cross_modal_steer/router_comparison.py	/^    def forward(self, x: torch.
 forward	cross_modal_steer/router_comparison.py	/^    def forward(self, x: torch.Tensor, return_gating: bool = False):$/;"	m	class:ProgressiveRouter
 forward	steer_moe/al_models.py	/^    def forward(self, input_features, decoder_input_ids, labels=None):$/;"	m	class:AudioToText
 forward	steer_moe/aligner.py	/^    def forward(self, h_audio, return_gating=False):$/;"	m	class:SteerMoEAligner
+forward	steer_moe/conformer_module/adapter.py	/^    def forward(self, x, x_lens):$/;"	m	class:Adapter
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, padded_input, input_lengths, pad=True):$/;"	m	class:ConformerEncoder
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, q, k, v, mask=None):$/;"	m	class:EncoderMultiHeadAttention
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, q, k, v, mask=None):$/;"	m	class:ScaledDotProductAttention
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, q, k, v, pos_emb, mask=None):$/;"	m	class:RelPosMultiHeadAttention
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, x):$/;"	m	class:ConformerFeedForward
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, x):$/;"	m	class:RelPositionalEncoding
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, x):$/;"	m	class:Swish
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, x, mask=None):$/;"	m	class:ConformerConvolution
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, x, pos_emb, slf_attn_mask=None, pad_mask=None):$/;"	m	class:RelPosEmbConformerBlock
+forward	steer_moe/conformer_module/conformer_encoder.py	/^    def forward(self, x, x_mask):$/;"	m	class:Conv2dSubsampling
+forward	steer_moe/conformer_module/transformer_decoder.py	/^    def forward(self, dec_input, enc_output, self_attn_mask, cross_attn_mask,$/;"	m	class:DecoderLayer
+forward	steer_moe/conformer_module/transformer_decoder.py	/^    def forward(self, q, k, v, mask=None):$/;"	m	class:DecoderMultiHeadAttention
+forward	steer_moe/conformer_module/transformer_decoder.py	/^    def forward(self, q, k, v, mask=None):$/;"	m	class:DecoderScaledDotProductAttention
+forward	steer_moe/conformer_module/transformer_decoder.py	/^    def forward(self, x):$/;"	m	class:PositionalEncoding
+forward	steer_moe/conformer_module/transformer_decoder.py	/^    def forward(self, x):$/;"	m	class:PositionwiseFeedForward
 forward	steer_moe/efficient_layer_wise_whisper.py	/^    def forward(self, mel_spec, return_gating=False):$/;"	m	class:SharedRouterLayerWiseSteeringWhisperEncoder
 forward	steer_moe/layer_wise_aligner.py	/^    def forward(self, audio_input, return_gating=False):$/;"	m	class:WhisperEncoderWithSteering
 forward	steer_moe/layer_wise_aligner.py	/^    def forward(self, whisper_encoder, audio_input, return_gating=False):$/;"	m	class:LayerWiseSteerMoEAligner
@@ -1158,6 +1237,11 @@ forward	steer_moe/models.py	/^    def forward(self, audio_waveform, *args, **kwa
 forward	steer_moe/models.py	/^    def forward(self, audio_waveform, decoder_input_ids=None, labels=None, $/;"	m	class:SteerMoEHybridModel
 forward	steer_moe/models.py	/^    def forward(self, audio_waveform, decoder_input_ids=None, labels=None, $/;"	m	class:SteerMoELayerWiseModel
 forward	steer_moe/models.py	/^    def forward(self, audio_waveform=None, input_features=None, decoder_input_ids=None, labels=N/;"	m	class:SteerMoEEfficientLayerWiseModel
+forward	steer_moe/models.py	/^    def forward(self, audio_waveform=None, input_features=None,input_lengths=None, decoder_input/;"	m	class:SteerMoEEfficientLayerWiseModelForConformer
+forward	steer_moe/models_zhangbixi_tmp.py	/^    def forward(self, audio_waveform, *args, **kwargs):$/;"	m	class:SteerMoEModel
+forward	steer_moe/models_zhangbixi_tmp.py	/^    def forward(self, audio_waveform, decoder_input_ids=None, labels=None, $/;"	m	class:SteerMoEHybridModel
+forward	steer_moe/models_zhangbixi_tmp.py	/^    def forward(self, audio_waveform, decoder_input_ids=None, labels=None, $/;"	m	class:SteerMoELayerWiseModel
+forward	steer_moe/models_zhangbixi_tmp.py	/^    def forward(self, audio_waveform=None, input_features=None, decoder_input_ids=None, labels=N/;"	m	class:SteerMoEEfficientLayerWiseModel
 forward	steer_moe/shared_router_implementation.py	/^    def forward(self, mel_spec, return_gating=False):$/;"	m	class:MultipleRoutersLayerWiseSteeringWhisperEncoder
 forward	steer_moe/shared_router_implementation.py	/^    def forward(self, mel_spec, return_gating=False):$/;"	m	class:SharedRouterLayerWiseSteeringWhisperEncoder
 forward	steer_moe/tokenizer/glm4/cosyvoice/flow/decoder.py	/^    def forward(self, x, mask, mu, t, spks=None, cond=None):$/;"	m	class:ConditionalDecoder
@@ -1309,6 +1393,7 @@ forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def forward($/
 forward	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def forward(self, input_ids, past_key_values_length=0):$/;"	m	class:WhisperPositionalEmbedding
 forward	tmpx07ntkc2/_remote_module_non_scriptable.py	/^def forward(self, *args, **kwargs):$/;"	f
 forward_async	tmpx07ntkc2/_remote_module_non_scriptable.py	/^def forward_async(self, *args, **kwargs):$/;"	f
+forward_attention	steer_moe/conformer_module/conformer_encoder.py	/^    def forward_attention(self, attn, v, mask=None):$/;"	m	class:ScaledDotProductAttention
 forward_attention	steer_moe/tokenizer/glm4/cosyvoice/transformer/attention.py	/^    def forward_attention($/;"	m	class:MultiHeadedAttention	typeref:typename:torch.Tensor
 forward_chunk	steer_moe/tokenizer/glm4/cosyvoice/transformer/encoder.py	/^    def forward_chunk($/;"	m	class:BaseEncoder	typeref:typename:Tuple[torch.Tensor,torch.Tensor,torch.Tensor]
 forward_chunk_by_chunk	steer_moe/tokenizer/glm4/cosyvoice/transformer/encoder.py	/^    def forward_chunk_by_chunk($/;"	m	class:BaseEncoder	typeref:typename:Tuple[torch.Tensor,torch.Tensor]
@@ -1321,6 +1406,8 @@ forward_layers_checkpointed	steer_moe/tokenizer/glm4/cosyvoice/transformer/decod
 forward_layers_checkpointed	steer_moe/tokenizer/glm4/cosyvoice/transformer/encoder.py	/^    def forward_layers_checkpointed(self, xs: torch.Tensor,$/;"	m	class:BaseEncoder	typeref:typename:torch.Tensor
 forward_one_step	steer_moe/tokenizer/glm4/cosyvoice/transformer/decoder.py	/^    def forward_one_step($/;"	m	class:BiTransformerDecoder	typeref:typename:Tuple[torch.Tensor,List[torch.Tensor]]
 forward_one_step	steer_moe/tokenizer/glm4/cosyvoice/transformer/decoder.py	/^    def forward_one_step($/;"	m	class:TransformerDecoder	typeref:typename:Tuple[torch.Tensor,List[torch.Tensor]]
+forward_output	steer_moe/conformer_module/conformer_encoder.py	/^    def forward_output(self, output, residual, sz_b, len_q):$/;"	m	class:EncoderMultiHeadAttention
+forward_qkv	steer_moe/conformer_module/conformer_encoder.py	/^    def forward_qkv(self, q, k, v):$/;"	m	class:EncoderMultiHeadAttention
 forward_qkv	steer_moe/tokenizer/glm4/cosyvoice/transformer/attention.py	/^    def forward_qkv($/;"	m	class:MultiHeadedAttention	typeref:typename:Tuple[torch.Tensor,torch.Tensor,torch.Tensor]
 fp16	configs/stage0.json	/^  "fp16": {$/;"	o
 fp16	configs/stage2.json	/^  "fp16": {$/;"	o
@@ -1331,11 +1418,13 @@ freeze_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^ 
 freeze_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def freeze_encoder(self):$/;"	m	class:WhisperVQForConditionalGeneration
 freeze_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def freeze_encoder(self):$/;"	m	class:WhisperVQModel
 freeze_encoder	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def freeze_encoder(self):$/;"	m	class:WhisperModel
+from_args	steer_moe/fireredasr_aed.py	/^    def from_args(cls, args):$/;"	m	class:FireRedAsrAed
 frontend_cross_lingual	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    def frontend_cross_lingual(self, tts_text, prompt_speech_16k):$/;"	m	class:CosyVoiceFrontEnd
 frontend_instruct	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    def frontend_instruct(self, tts_text, spk_id, instruct_text):$/;"	m	class:CosyVoiceFrontEnd
 frontend_sft	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    def frontend_sft(self, tts_text, spk_id):$/;"	m	class:CosyVoiceFrontEnd
 frontend_zero_shot	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    def frontend_zero_shot(self, tts_text, prompt_text, prompt_speech_16k):$/;"	m	class:CosyVoiceFrontEnd
 generate	steer_moe/models.py	/^    def generate(self, input_features, decoder_input_ids=None, **kwargs):$/;"	m	class:SteerMoEEfficientLayerWiseModel
+generate	steer_moe/models_zhangbixi_tmp.py	/^    def generate(self, input_features, decoder_input_ids=None, **kwargs):$/;"	m	class:SteerMoEEfficientLayerWiseModel
 generate	steer_moe/tokenizer/glm4/speech_tokenizer/generation_whisper.py	/^    def generate($/;"	m	class:WhisperGenerationMixin
 generate_no_timestamps	whisper_train/generate_raw_parquet_multi_processing_word.py	/^def generate_no_timestamps(chunks, actual_start_time):$/;"	f
 generate_path	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/model.py	/^def generate_path(duration, mask):$/;"	f
@@ -1362,8 +1451,12 @@ get_decoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    
 get_decoder	steer_moe/tokenizer/whisper_Lv3/modeling_whisper.py	/^    def get_decoder(self):$/;"	m	class:WhisperModel
 get_device	steer_moe/al_models.py	/^    def get_device(self):$/;"	m	class:AudioToText
 get_device	steer_moe/models.py	/^    def get_device(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
+get_device	steer_moe/models.py	/^    def get_device(self):$/;"	m	class:SteerMoEEfficientLayerWiseModelForConformer
 get_device	steer_moe/models.py	/^    def get_device(self):$/;"	m	class:SteerMoEHybridModel
 get_device	steer_moe/models.py	/^    def get_device(self):$/;"	m	class:SteerMoELayerWiseModel
+get_device	steer_moe/models_zhangbixi_tmp.py	/^    def get_device(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
+get_device	steer_moe/models_zhangbixi_tmp.py	/^    def get_device(self):$/;"	m	class:SteerMoEHybridModel
+get_device	steer_moe/models_zhangbixi_tmp.py	/^    def get_device(self):$/;"	m	class:SteerMoELayerWiseModel
 get_device	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/cli.py	/^def get_device(args):$/;"	f
 get_empty_segmentation	whisper_train/generate_raw_parquet_multi_processing_word.py	/^def get_empty_segmentation(duration, music_li, noise_li, frame_rate, channels,$/;"	f
 get_encoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def get_encoder(self):$/;"	m	class:WhisperVQForConditionalGeneration
@@ -1403,9 +1496,12 @@ get_steering_analysis	steer_moe/layer_wise_aligner.py	/^    def get_steering_ana
 get_steering_analysis	steer_moe/layer_wise_whisper.py	/^    def get_steering_analysis(self, gating_scores_list):$/;"	m	class:LayerWiseSteeringWhisperEncoder
 get_steering_analysis	steer_moe/models.py	/^    def get_steering_analysis(self, gating_scores):$/;"	m	class:SteerMoEEfficientLayerWiseModel
 get_steering_analysis	steer_moe/models.py	/^    def get_steering_analysis(self, gating_scores):$/;"	m	class:SteerMoELayerWiseModel
+get_steering_analysis	steer_moe/models_zhangbixi_tmp.py	/^    def get_steering_analysis(self, gating_scores):$/;"	m	class:SteerMoEEfficientLayerWiseModel
+get_steering_analysis	steer_moe/models_zhangbixi_tmp.py	/^    def get_steering_analysis(self, gating_scores):$/;"	m	class:SteerMoELayerWiseModel
 get_text	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/data/text_mel_datamodule.py	/^    def get_text(self, text, add_blank=True):$/;"	m	class:TextMelDataset
 get_texts	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/cli.py	/^def get_texts(args):$/;"	f
 get_user_data_dir	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/utils.py	/^def get_user_data_dir(appname="matcha_tts"):$/;"	f
+get_ys_lengths	steer_moe/conformer_module/transformer_decoder.py	/^    def get_ys_lengths(self, ys):$/;"	m	class:TransformerDecoder
 glm_tokenizer	steer_moe/tokenizer/glm4/web_demo.py	/^    glm_tokenizer = None$/;"	v
 global_phonemizer	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/cleaners.py	/^global_phonemizer = phonemizer.backend.EspeakBackend($/;"	v
 gr	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/app.py	/^import gradio as gr$/;"	I	nameref:module:gradio
@@ -1416,7 +1512,9 @@ gradient_accumulation_steps	configs/stage2_simple.json	/^  "gradient_accumulatio
 gradient_accumulation_steps	configs/stage3.json	/^  "gradient_accumulation_steps": "auto",$/;"	s
 gradient_accumulation_steps	configs/stage3_wo_offload.json	/^  "gradient_accumulation_steps": "auto",$/;"	s
 gradient_checkpointing_disable	steer_moe/models.py	/^    def gradient_checkpointing_disable(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
+gradient_checkpointing_disable	steer_moe/models_zhangbixi_tmp.py	/^    def gradient_checkpointing_disable(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
 gradient_checkpointing_enable	steer_moe/models.py	/^    def gradient_checkpointing_enable(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
+gradient_checkpointing_enable	steer_moe/models_zhangbixi_tmp.py	/^    def gradient_checkpointing_enable(self):$/;"	m	class:SteerMoEEfficientLayerWiseModel
 gradient_clipping	configs/stage0.json	/^  "gradient_clipping": "auto",$/;"	s
 gradient_clipping	configs/stage2.json	/^  "gradient_clipping": "auto",$/;"	s
 gradient_clipping	configs/stage2_simple.json	/^  "gradient_clipping": "auto",$/;"	s
@@ -1434,11 +1532,13 @@ hf_hub_utils	whisper_train/main_word_correct_clips.py	/^import huggingface_hub.u
 hift_checkpoint	steer_moe/tokenizer/glm4/web_demo.py	/^    hift_checkpoint = os.path.join(args.flow_path, 'hift.pt')$/;"	v
 history_state	steer_moe/tokenizer/glm4/web_demo.py	/^        history_state = gr.State([])$/;"	v
 hybrid_model_test	steer_moe/models.py	/^def hybrid_model_test():$/;"	f
+hybrid_model_test	steer_moe/models_zhangbixi_tmp.py	/^def hybrid_model_test():$/;"	f
 hysteresis	configs/stage0.json	/^    "hysteresis": 2,$/;"	n	object:fp16
 hysteresis	configs/stage2.json	/^    "hysteresis": 2,$/;"	n	object:fp16
 hysteresis	configs/stage2_simple.json	/^    "hysteresis": 2,$/;"	n	object:fp16
 hysteresis	configs/stage3.json	/^    "hysteresis": 2,$/;"	n	object:fp16
 hysteresis	configs/stage3_wo_offload.json	/^    "hysteresis": 2,$/;"	n	object:fp16
+ignored_target_position_is_0	steer_moe/conformer_module/transformer_decoder.py	/^    def ignored_target_position_is_0(self, padded_targets, ignore_id):$/;"	m	class:TransformerDecoder
 inference	steer_moe/tokenizer/glm4/cosyvoice/cli/model.py	/^    def inference(self, text, text_len, flow_embedding, llm_embedding=torch.zeros(0, 192),$/;"	m	class:CosyVoiceModel
 inference	steer_moe/tokenizer/glm4/cosyvoice/flow/flow.py	/^    def inference(self,$/;"	m	class:MaskedDiffWithXvec
 inference	steer_moe/tokenizer/glm4/cosyvoice/flow/flow_gradtts.py	/^    def inference(self,$/;"	m	class:MaskedDiffWithXvec
@@ -1452,6 +1552,8 @@ inference_zero_shot	steer_moe/tokenizer/glm4/cosyvoice/cli/cosyvoice.py	/^    de
 init_dataset_and_dataloader	steer_moe/tokenizer/glm4/cosyvoice/utils/train_utils.py	/^def init_dataset_and_dataloader(args, configs):$/;"	f
 init_distributed	steer_moe/tokenizer/glm4/cosyvoice/utils/train_utils.py	/^def init_distributed(args):$/;"	f
 init_optimizer_and_scheduler	steer_moe/tokenizer/glm4/cosyvoice/utils/train_utils.py	/^def init_optimizer_and_scheduler(args, configs, model):$/;"	f
+init_pooling_layer	steer_moe/efficient_layer_wise_whisper.py	/^    def init_pooling_layer(self, pooling_type, pooling_kernel_size):$/;"	m	class:EfficientLayerWiseSteeringWhisperEncoder
+init_pooling_layer	steer_moe/models.py	/^    def init_pooling_layer(self, pooling_kernel_size, pooling_type):$/;"	m	class:SteerMoEEfficientLayerWiseModel
 init_pooling_layer	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def init_pooling_layer(self, config: WhisperVQConfig):$/;"	m	class:WhisperVQEncoder
 init_quantize_layer	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def init_quantize_layer(self, config: WhisperVQConfig, quantize_load_codebook=None):$/;"	m	class:WhisperVQEncoder
 init_summarywriter	steer_moe/tokenizer/glm4/cosyvoice/utils/train_utils.py	/^def init_summarywriter(args):$/;"	f
@@ -1467,6 +1569,7 @@ initialize_weights	steer_moe/tokenizer/glm4/cosyvoice/flow/decoder.py	/^    def 
 initialize_weights	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/components/decoder.py	/^    def initialize_weights(self):$/;"	m	class:Decoder
 inpainting_callback	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/sampling.py	/^        def inpainting_callback(args):$/;"	f	function:sample_k	file:
 input_features	steer_moe/models.py	/^    input_features=extract_whisper_feat(test_audio)$/;"	v
+input_features	steer_moe/models_zhangbixi_tmp.py	/^    input_features=extract_whisper_feat(test_audio)$/;"	v
 input_mode	steer_moe/tokenizer/glm4/web_demo.py	/^                input_mode = gr.Radio(["audio", "text"], label="Input Mode", value="audio")$/;"	v
 input_tokens	steer_moe/tokenizer/glm4/web_demo.py	/^            input_tokens = gr.Textbox($/;"	v
 instantiate_callbacks	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/utils/instantiators.py	/^def instantiate_callbacks(callbacks_cfg: DictConfig) -> List[Callback]:$/;"	f	typeref:typename:List[Callback]
@@ -1494,6 +1597,7 @@ load_config	scripts/train.py	/^def load_config(path):$/;"	f
 load_config	scripts/train_layer_wise.py	/^def load_config(path: str) -> Dict:$/;"	f	typeref:typename:Dict
 load_custom	scripts/train_layer_wise.py	/^def load_custom(path, whisper_encoder, llm_decoder, **kwargs):$/;"	f
 load_data_test	whisper_train/data_process.py	/^def load_data_test():$/;"	f
+load_encoder	steer_moe/efficient_layer_wise_conformer.py	/^    def load_encoder(self, model_path):$/;"	m	class:LoadConformerEncoder
 load_from_hub	scripts/train.py	/^def load_from_hub(model_class, repo_name, subfolder=None, revision=None, tokenizer_class=None):$/;"	f
 load_generation_config	whisper_train/main_word_correct_clips.py	/^    def load_generation_config(gen_config_arg: Union[str, GenerationConfig]) -> GenerationConfig/;"	m	class:Logged_Seq2SeqTrainer	typeref:typename:GenerationConfig
 load_hifigan	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/cli.py	/^def load_hifigan(checkpoint_path, device):$/;"	f
@@ -1600,10 +1704,15 @@ nn	cross_modal_steer/router_comparison.py	/^import torch.nn as nn$/;"	I	nameref:
 nn	scripts/train_layer_wise.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 nn	steer_moe/al_models.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 nn	steer_moe/aligner.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	steer_moe/conformer_module/adapter.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	steer_moe/conformer_module/conformer_encoder.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	steer_moe/conformer_module/transformer_decoder.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	steer_moe/efficient_layer_wise_conformer.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 nn	steer_moe/efficient_layer_wise_whisper.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 nn	steer_moe/layer_wise_aligner.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 nn	steer_moe/layer_wise_whisper.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 nn	steer_moe/models.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	steer_moe/models_zhangbixi_tmp.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 nn	steer_moe/shared_router_implementation.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 nn	steer_moe/tokenizer/glm4/cosyvoice/flow/decoder.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 nn	steer_moe/tokenizer/glm4/cosyvoice/flow/flow.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
@@ -1667,6 +1776,7 @@ ori_parquet_dir	whisper_train/generate_raw_parquet_multi_processing_word.py	/^  
 ori_parquet_dir	whisper_train/pre_process_word_correct_data.py	/^    ori_parquet_dir = f'\/root\/autodl-nas\/ruitao\/data\/train\/origin_parquet\/{batch_tag}'$/;"	v
 ort	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/onnx/infer.py	/^import onnxruntime as ort$/;"	I	nameref:module:onnxruntime
 output	steer_moe/models.py	/^    output=steer_moe_model(input_features)$/;"	v
+output	steer_moe/models_zhangbixi_tmp.py	/^    output=steer_moe_model(input_features)$/;"	v
 output_audio	steer_moe/tokenizer/glm4/web_demo.py	/^                output_audio = gr.Audio(label="Play", streaming=True,$/;"	v
 output_dataset_path	whisper_train/pre_process_aishell.py	/^    output_dataset_path = '\/root\/autodl-nas\/ruitao\/data\/processed_aishell\/'$/;"	v
 output_dir	whisper_train/main_word_correct_clips.py	/^        output_dir = f'\/root\/autodl-tmp\/ruitao\/whisper_test\/model\/whisper_large_v2_{batch_/;"	v
@@ -1686,6 +1796,7 @@ pad_list	steer_moe/tokenizer/glm4/cosyvoice/utils/common.py	/^def pad_list(xs: L
 pad_or_trim	steer_moe/tokenizer/whisper_Lv3/whisper.py	/^def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):$/;"	f
 pad_unpad_sequence	steer_moe/tokenizer/glm4/cosyvoice/llm/llm.py	/^    def pad_unpad_sequence(self, sos_eos_emb, embedding, text_token, text_token_len, task_id_emb/;"	m	class:TransformerLM
 padding	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^def padding(data, use_spk_embedding, mode='train'):$/;"	f
+padding_position_is_0	steer_moe/conformer_module/conformer_encoder.py	/^    def padding_position_is_0(self, padded_input, input_lengths):$/;"	m	class:ConformerEncoder
 padding_speech_token	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^def padding_speech_token(data, use_spk_embedding, mode='train'):$/;"	f
 padding_speech_token_spk	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^def padding_speech_token_spk(data, use_spk_embedding, mode='train'):$/;"	f
 params	configs/stage3.json	/^    "params": {$/;"	o	object:optimizer
@@ -1824,6 +1935,8 @@ set_decoder	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    
 set_epoch	steer_moe/tokenizer/glm4/cosyvoice/dataset/dataset.py	/^    def set_epoch(self, epoch):$/;"	m	class:DataList
 set_epoch	steer_moe/tokenizer/glm4/cosyvoice/dataset/dataset.py	/^    def set_epoch(self, epoch):$/;"	m	class:DistributedSampler
 set_epoch	steer_moe/tokenizer/glm4/cosyvoice/dataset/dataset.py	/^    def set_epoch(self, epoch):$/;"	m	class:Processor
+set_finished_beam_score_to_zero	steer_moe/conformer_module/transformer_decoder.py	/^    def set_finished_beam_score_to_zero(self, scores, is_finished):$/;"	m	class:TransformerDecoder
+set_finished_beam_y_to_eos	steer_moe/conformer_module/transformer_decoder.py	/^    def set_finished_beam_y_to_eos(self, ys, is_finished):$/;"	m	class:TransformerDecoder
 set_input_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def set_input_embeddings(self, value):$/;"	m	class:WhisperDecoderWrapper
 set_input_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def set_input_embeddings(self, value):$/;"	m	class:WhisperForCausalLM
 set_input_embeddings	steer_moe/tokenizer/glm4/speech_tokenizer/modeling_whisper.py	/^    def set_input_embeddings(self, value):$/;"	m	class:WhisperVQDecoder
@@ -1885,6 +1998,7 @@ start_app	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/Makefile	/^start_app: 
 state_dict	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/data/text_mel_datamodule.py	/^    def state_dict(self):  # pylint: disable=no-self-use$/;"	m	class:TextMelDataModule
 static_batch	steer_moe/tokenizer/glm4/cosyvoice/dataset/processor.py	/^def static_batch(data, batch_size=16):$/;"	f
 steer_moe_model	steer_moe/models.py	/^    steer_moe_model=SteerMoEEfficientLayerWiseModel($/;"	v
+steer_moe_model	steer_moe/models_zhangbixi_tmp.py	/^    steer_moe_model=SteerMoEEfficientLayerWiseModel($/;"	v
 steps_per_print	configs/stage3.json	/^  "steps_per_print": 5,$/;"	n
 steps_per_print	configs/stage3_wo_offload.json	/^  "steps_per_print": 5,$/;"	n
 stft_fn	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/hifigan/denoiser.py	/^        def stft_fn(audio, n_fft, hop_length, win_length, window):$/;"	f	member:Denoiser.__init__	file:
@@ -1915,6 +2029,7 @@ test	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/Makefile	/^test: ## Run not
 test-full	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/Makefile	/^test-full: ## Run all tests$/;"	t
 test_aligner_output_and_lb_loss	tests/test_aligner.py	/^def test_aligner_output_and_lb_loss():$/;"	f
 test_audio	steer_moe/models.py	/^    test_audio="\/root\/autodl-nas\/ruitao\/SteerMoE\/tests\/output_audio.wav"$/;"	v
+test_audio	steer_moe/models_zhangbixi_tmp.py	/^    test_audio="\/root\/autodl-nas\/ruitao\/SteerMoE\/tests\/output_audio.wav"$/;"	v
 text_column	steer_moe/utils.py	/^    text_column: str = "labels"  # Preprocessed tokenized labels$/;"	v	class:DataCollatorSpeechSeqSeqWithPadding	typeref:typename:str
 text_input	steer_moe/tokenizer/glm4/web_demo.py	/^                text_input = gr.Textbox(label="Input text", placeholder="Enter your text here.../;"	v
 text_normalize	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    def text_normalize(self, text, split=True):$/;"	m	class:CosyVoiceFrontEnd
@@ -1968,6 +2083,7 @@ train_micro_batch_size_per_gpu	configs/stage3_wo_offload.json	/^  "train_micro_b
 train_one_epoc	steer_moe/tokenizer/glm4/cosyvoice/utils/executor.py	/^    def train_one_epoc(self, model, optimizer, scheduler, train_data_loader, cv_data_loader, wri/;"	m	class:Executor
 train_with_deepspeed	scripts/train.py	/^def train_with_deepspeed(config_path='configs\/default.yaml', deepspeed_config_path='configs\/de/;"	f
 training_step	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/baselightningmodule.py	/^    def training_step(self, batch: Any, batch_idx: int):$/;"	m	class:BaseLightningClass
+transcribe	steer_moe/fireredasr_aed.py	/^    def transcribe(self, padded_input, input_lengths,$/;"	m	class:FireRedAsrAed
 transcription_file	whisper_train/pre_process_aishell.py	/^    transcription_file = '\/root\/autodl-nas\/ruitao\/data\/aishell\/data\/trans.txt'$/;"	v
 transliteration_cleaners	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/text/cleaners.py	/^def transliteration_cleaners(text):$/;"	f
 type	configs/stage3.json	/^    "type": "AdamW",$/;"	s	object:optimizer
@@ -1980,6 +2096,7 @@ update	steer_moe/tokenizer/glm4/cosyvoice/dataset/dataset.py	/^    def update(se
 update_data_statistics	steer_moe/tokenizer/glm4/third_party/Matcha-TTS/matcha/models/baselightningmodule.py	/^    def update_data_statistics(self, data_statistics):$/;"	m	class:BaseLightningClass
 update_input_interface	steer_moe/tokenizer/glm4/web_demo.py	/^    def update_input_interface(input_mode):$/;"	f
 update_parameter_and_lr	steer_moe/tokenizer/glm4/cosyvoice/utils/train_utils.py	/^def update_parameter_and_lr(model, optimizer, scheduler, info_dict):$/;"	f
+upper_triangular_is_0	steer_moe/conformer_module/transformer_decoder.py	/^    def upper_triangular_is_0(self, size):$/;"	m	class:TransformerDecoder
 use_compile	steer_moe/tokenizer/glm4/cosyvoice/flow/stable/blocks.py	/^use_compile = True$/;"	v
 use_ttsfrd	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    use_ttsfrd = False$/;"	v
 use_ttsfrd	steer_moe/tokenizer/glm4/cosyvoice/cli/frontend.py	/^    use_ttsfrd = True$/;"	v

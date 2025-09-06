@@ -27,8 +27,8 @@ steering:
 training:
   output_dir: "./results/layer_wise_steermoe"
   logging_dir: "./logs/layer_wise_steermoe"
-  batch_size: 4
-  epochs: 320
+  batch_size: 8
+  epochs: 2
   learning_rate: 1e-4
   steering_learning_rate: 1e-3
   router_learning_rate: 1e-4
@@ -52,7 +52,6 @@ parquet_dirs:
   # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_8_nots_processed_in_batch/"
   # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_9_nots_processed_in_batch/"
   - "/home/fengruitao/rt_nas/data/processed_aishell/train/"
-  # - "/home/fengruitao/rt_nas/data/processed_aishell_test/train/"
 
 audio_column: "audio"
 text_column: "text"

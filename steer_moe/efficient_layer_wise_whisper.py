@@ -47,12 +47,22 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
     This approach uses one router to assign weights to steering vectors for all layers.
     """
     # def __init__(self, original_whisper_encoder, num_experts: int = 8, steering_scale: float = 0.1):
-    def __init__(self, whisper_encoder_path, num_experts: int = 8, steering_scale: float = 0.1):
+    def __init__(self, whisper_encoder_path, 
+        num_experts: int = 8, 
+        steering_scale: float = 0.1, 
+        pooling_kernel_size: int = 4, 
+        pooling_type: str = None, 
+        pooling_position: int = 32):
+
         super().__init__()
         # self.original_encoder = original_whisper_encoder
         self.original_encoder = WhisperEncoder(whisper_encoder_path)
         self.num_experts = num_experts
         self.steering_scale = steering_scale
+        self.pooling_kernel_size = pooling_kernel_size
+        self.pooling_type = pooling_type
+        self.pooling_position = pooling_position
+
         logging.debug(f"self.original_encoder: {self.original_encoder}")
         
         # Get the number of layers from the speech encoder
@@ -83,8 +93,8 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             param.requires_grad = False
 
         # uncomment the following line to use the pooling layer to downsample the features
-        # self.pooling_layer = None
-        # self.init_pooling_layer(pooling_type="max", pooling_kernel_size=4)
+        self.pooling_layer = None
+        self.init_pooling_layer(pooling_type="max", pooling_kernel_size=4)
 
 
     def init_pooling_layer(self, pooling_type, pooling_kernel_size):
@@ -233,6 +243,14 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
             
             # Store gating scores for analysis
             gating_scores_list.append(gating_scores)
+
+            if layer_idx + 1 == self.pooling_position and self.pooling_kernel_size is not None:
+                x = x.permute(0, 2, 1)
+                if x.shape[-1] % self.pooling_kernel_size != 0:
+                    x = torch.nn.functional.pad(x, (
+                    0, self.pooling_kernel_size - x.shape[-1] % self.pooling_kernel_size))
+                x = self.pooling_layer(x).permute(0, 2, 1)
+
 
         logging.debug(f"layers x: {x.shape}, {x.dtype}, {x}")
         

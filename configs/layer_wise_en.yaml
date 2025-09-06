@@ -3,7 +3,7 @@
 # Whisper Encoder Configuration
 whisper_encoder:
   # model_path: "/root/autodl-tmp/ruitao/whisper_test/model/whisper_large_v2_WORD_CORRECT_14/model_end"  # Update with actual path
-  model_path: "/home/autodl/autodl-tmp-bak/model/whisper-large-v3/"  # Update with actual path
+  model_path: "/root/autodl-tmp/model/whisper-large-v3"  # Update with actual path
   feature_dim: 1280
   num_layers: 32
 
@@ -11,7 +11,7 @@ whisper_encoder:
 llm_decoder:
   # model_name: "/root/autodl-tmp/model/Qwen2.5-7B-Ins-1M/"
   # model_name: "/root/autodl-tmp/model/Qwen2.5-3B-Instruct/"
-  model_name: "/home/autodl/autodl-tmp-bak/model/Qwen2.5-7B-Instruct/"
+  model_name: "/root/autodl-tmp/model/Qwen2.5-0.5B-Instruct/"
   max_length: 512
   use_cache: false  # Disable cache during training
 
@@ -25,10 +25,10 @@ steering:
 
 # Training Configuration
 training:
-  output_dir: "./results/layer_wise_steermoe"
-  logging_dir: "./logs/layer_wise_steermoe"
-  batch_size: 4
-  epochs: 320
+  output_dir: "./results/layer_wise_steermoe_en"
+  logging_dir: "./logs/layer_wise_steermoe_en"
+  batch_size: 16
+  epochs: 10
   learning_rate: 1e-4
   steering_learning_rate: 1e-3
   router_learning_rate: 1e-4
@@ -40,19 +40,8 @@ training:
 
 # Dataset Configuration
 parquet_dirs:
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/xunfei_202409_1_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/xunfei_202409_2_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_1_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_2_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_3_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_4_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_5_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_6_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_7_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_8_nots_processed_in_batch/"
-  # - "/home/fengruitao/rt_nas/data/train/processed_parquet/WORD_CORRECT_9_nots_processed_in_batch/"
-  - "/home/fengruitao/rt_nas/data/processed_aishell/train/"
-  # - "/home/fengruitao/rt_nas/data/processed_aishell_test/train/"
+  - "/root/autodl-nas/ruitao/data/librispeech_asr/all/train.clean.100"
+  - "/root/autodl-nas/ruitao/data/librispeech_asr/all/train.clean.360"
 
 audio_column: "audio"
 text_column: "text"
@@ -63,8 +52,7 @@ max_text_length: 448
 filter_dataset: true
 
 # Textual Prompt Configuration
-# textual_prompt: "请转写以下音频内容为文字："  # Chinese prompt for ASR task
-textual_prompt: "请逐字复述音频内容为文字: "  # Chinese prompt for ASR task
+textual_prompt: "请转写以下音频内容为文字："  # Chinese prompt for ASR task
 
 # Model Configuration
 max_prompt_tokens: 2048

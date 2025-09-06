@@ -132,6 +132,7 @@ def prepare_dataset_from_scatch(batch, audio_column, text_column, whisper_proces
         'text': text
     }
 
+#TODO add padding class for conformer
 
 @dataclass
 class DataCollatorSpeechSeqSeqWithPadding:
@@ -142,7 +143,8 @@ class DataCollatorSpeechSeqSeqWithPadding:
     feature_extractor: Any
     tokenizer: Any
     textual_prompt: Optional[str] = None
-    max_length: int = 1024
+    # max_length: int = 1024
+    max_length: int = 448
     audio_column: str = "input_features"  # Preprocessed audio features
     text_column: str = "labels"  # Preprocessed tokenized labels
     return_attention_mask: bool = False
@@ -174,7 +176,7 @@ class DataCollatorSpeechSeqSeqWithPadding:
         # Pad audio features to same length (these are already processed Whisper features)
         audio_features=[{"input_features": audio_feat} for audio_feat in audio_features]
         if audio_features:
-            batch_audio=self.feature_extractor.pad(audio_features, return_tensors="pt").input_features
+            batch_audio=self.feature_extractor.pad(audio_features, return_tensors="pt").input_features  #TODO use redefined padding class
         else:
             batch_audio = torch.empty(batch_size, 128, 3000, dtype=torch.float32)
 
@@ -313,6 +315,7 @@ class DataCollatorSpeechSeqSeqWithPadding:
             "input_features": batch_audio,  # Model expects audio_waveform parameter
             "decoder_input_ids": batch_input_ids,
             "labels": batch_labels,
+            #TODO add "input_lengths"
         }
         
         # if self.return_attention_mask:
