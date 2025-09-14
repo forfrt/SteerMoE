@@ -3,6 +3,7 @@
  * created on 16-07-2025
  * github: https://github.com/forfrt
 """
+from pydub import AudioSegment
 
 import yaml
 import torch
@@ -112,6 +113,19 @@ def prepare_asr_dataset(dataset, audio_column: str, text_column: str,
     processed = dataset.map(_prepare, remove_columns=dataset.column_names)
     return processed
 
+def prepare_asr_dataset_for_conformer(dataset, audio_column: str, text_column: str,
+                        tokenizer, sample_rate: int = 16000):
+    """Prepare ASR dataset for training."""
+    def _prepare(batch):
+        return prepare_dataset_for_conformer(batch, audio_column, text_column, tokenizer,sample_rate)
+
+    # Cast audio column to datasets.Audio if needed
+    if not isinstance(dataset.features[audio_column], Audio):
+        dataset = dataset.cast_column(audio_column, Audio(sampling_rate=sample_rate))
+
+    processed = dataset.map(_prepare, remove_columns=dataset.column_names)
+    return processed
+
 
 class SteeringAnalysisCallback(TrainerCallback):
     """Callback for analyzing steering patterns during training."""
@@ -156,36 +170,11 @@ class GradientClippingCallback(TrainerCallback):
                     torch.nn.utils.clip_grad_norm_(param, self.max_norm)
 
 
-def create_layer_wise_optimizer(model, learning_rate: float = 1e-4,
-                               steering_lr: float = 1e-3, router_lr: float = 1e-4):
-    """Create optimizer with different learning rates for different components."""
-    # Separate parameter groups
-    steering_params = []
-    router_params = []
-    other_params = []
-
-    for name, param in model.named_parameters():
-        if param.requires_grad:
-            if 'steering_vectors' in name or 'layer_scales' in name:
-                steering_params.append(param)
-            elif 'router' in name:
-                router_params.append(param)
-            else:
-                other_params.append(param)
-
-    # Create parameter groups with different learning rates
-    param_groups = [
-        {'params': steering_params, 'lr': steering_lr, 'name': 'steering'},
-        {'params': router_params, 'lr': router_lr, 'name': 'router'},
-        {'params': other_params, 'lr': learning_rate, 'name': 'other'}
-    ]
-
-    return torch.optim.AdamW(param_groups)
-
 # in your models.py
 def save_custom(model, path):
     os.makedirs(path, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(path, "pytorch_model.bin"))
+
 
 @staticmethod
 def load_custom(path, whisper_encoder, llm_decoder, **kwargs):
@@ -197,250 +186,6 @@ def load_custom(path, whisper_encoder, llm_decoder, **kwargs):
     sd = torch.load(os.path.join(path, "pytorch_model.bin"), map_location="cpu")
     model.load_state_dict(sd, strict=True)
     return model
-
-
-def train_layer_wise_steermoe(config_path: str = 'configs/layer_wise.yaml',
-                             deepspeed_config_path: str = 'configs/stage2_simple.json',
-                             eval_dataset_name: Optional[str] = None,
-                             custom_test_set_path: Optional[str] = None,
-                             resume_from_checkpoint: Optional[str] = None):
-    """
-    Train SteerMoE model with layer-wise steering.
-    
-    Args:
-        config_path: Path to configuration file
-        deepspeed_config_path: Path to DeepSpeed configuration
-        eval_dataset_name: Name of evaluation dataset
-        custom_test_set_path: Path to custom test set
-        resume_from_checkpoint: Path to checkpoint to resume from
-    """
-    # Load configuration
-    config = load_config(config_path)
-
-
-    print("Loading LLM decoder...")
-    llm_decoder = AutoModelForCausalLM.from_pretrained(config['llm_decoder']['model_name'])
-    llm_decoder.eval()
-    for p in llm_decoder.parameters():
-        p.requires_grad = False
-
-    print("Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])
-    feature_extractor = WhisperFeatureExtractor.from_pretrained(config['whisper_encoder']['model_path'])
-    
-    # Add padding token if not present
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.pad_token_id = tokenizer.eos_token_id
-
-    # Create layer-wise steering Whisper encoder
-    print("Creating layer-wise steering Whisper encoder...")
-    layer_wise_whisper = EfficientLayerWiseSteeringWhisperEncoder(
-        whisper_encoder_path=config['whisper_encoder']['model_path'],
-        num_experts=config['steering']['num_experts'],
-        steering_scale=config['steering']['steering_scale']
-    )
-
-    # Create main model
-    print("Creating SteerMoE model...")
-    model = SteerMoEEfficientLayerWiseModel(
-        whisper_encoder=layer_wise_whisper,
-        llm_decoder=llm_decoder,
-        num_experts=config['steering']['num_experts'],
-        max_prompt_tokens=config.get('max_prompt_tokens', 2048),
-        use_adapter=config.get('use_adapter', True)
-    )
-
-    logging.info(f"model: {model}")
-
-    # Set model to training mode
-    model.train()
-
-    # Load dataset
-
-    print("Loading dataset...")
-    parquet_dirs = config.get('parquet_dirs', [])
-    batch_size = config['training']['batch_size']
-
-    logging.info(f"batch_size: {batch_size}")
-
-    # Expand parquet directories if they contain subdirectories
-    expanded_dirs = []
-    for parquet_dir in parquet_dirs:
-        if os.path.isdir(parquet_dir):
-            subdirs = [os.path.join(parquet_dir, d) for d in os.listdir(parquet_dir) 
-                      if os.path.isdir(os.path.join(parquet_dir, d))]
-            if subdirs:
-                expanded_dirs.extend(subdirs)
-            else:
-                expanded_dirs.append(parquet_dir)
-        else:
-            expanded_dirs.append(parquet_dir)
-
-    dataset = load_parquet_datasets_for_steermoe(expanded_dirs)
-    print(f"Dataset: {type(dataset)} {dataset}")
-
-    # Filter dataset if needed
-    # if config.get('filter_dataset', True):
-    #     dataset = filter_dataset_by_length(
-    #         dataset,
-    #         max_audio_length=config.get('max_audio_length', 30.0),
-    #         max_text_length=config.get('max_text_length', 448)
-    #     )
-
-    # Dataset is already preprocessed with input_features and labels
-    # No need for additional preparation
-    processed_dataset = dataset['train']
-
-    # Create validation split
-    if 'validation' in dataset:
-        processed_val = dataset['validation']
-    else:
-        # Split train into train/val
-        split_dataset = processed_dataset.train_test_split(test_size=0.05, seed=42)
-        processed_val = split_dataset['test']
-        processed_dataset = split_dataset['train']
-
-
-    # Create data collator for preprocessed data
-    textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")  # Default Chinese prompt
-    max_length = config.get('max_text_length', 512)
-
-
-    # Create data collator with fixed max length for consistent evaluation
-    data_collator = DataCollatorSpeechSeqSeqWithPadding(
-        feature_extractor=feature_extractor,
-        tokenizer=tokenizer,
-        textual_prompt=textual_prompt,
-        max_length=max_length,  # Fixed max length
-        audio_column="input_features",  # Use preprocessed audio features
-        text_column="labels"  # Use preprocessed labels
-    )
-
-    # Create custom compute metrics function
-    def compute_metrics_trainer(eval_pred):
-        logging.info(f"start evaluation: eval_pred: {eval_pred}")
-
-        try:
-            logits, labels = eval_pred
-            preds = logits.argmax(-1)
-        
-            # Decode predictions and labels
-            pred_str = []
-            label_str = []
-        
-            for pred_seq, label_seq in zip(preds, labels):
-                # Remove padding and special tokens from predictions
-                if hasattr(pred_seq, '__len__'):
-                    pred_tokens = pred_seq[pred_seq != tokenizer.pad_token_id]
-                    pred_text = tokenizer.decode(pred_tokens, skip_special_tokens=True)
-                    pred_str.append(pred_text)
-
-                # Remove -100 tokens from labels
-                if hasattr(label_seq, '__len__'):
-                    label_tokens = label_seq[label_seq != -100]
-                    label_text = tokenizer.decode(label_tokens, skip_special_tokens=True)
-                    label_str.append(label_text)
-        
-            if len(pred_str) > 0 and len(label_str) > 0:
-                try:
-                    cer_metric = load_metric('./scripts/cer.py')
-                    wer_metric = load_metric('./scripts/wer.py')
-                    cer = cer_metric.compute(predictions=pred_str, references=label_str)
-                    wer = wer_metric.compute(predictions=pred_str, references=label_str)
-                    return {"cer": cer, "wer": wer}
-                except Exception as e:
-                    logging.warning(f"Metrics computation failed: {e}")
-                    return {"cer": 1.0, "wer": 1.0}  # Return default values
-            else:
-                return {"cer": 1.0, "wer": 1.0}  # Return default values
-                
-        except Exception as e:
-            logging.error(f"Evaluation error: {e}")
-            return {"cer": 1.0, "wer": 1.0}  # Return default values
-        # cer_metric = load_metric('cer')
-        # wer_metric = load_metric('wer')
-        # cer = cer_metric.compute(predictions=pred_str, references=label_str)
-        # wer = wer_metric.compute(predictions=pred_str, references=label_str)
-        # logging.info(f"end evaluation: pred_str: {pred_str}, ref_str: {label_str}, cer: {cer}, wer: {wer}")
-        # return {"cer": cer, "wer": wer}
-
-    # Training arguments
-    training_args = TrainingArguments(
-        output_dir=config['training']['output_dir'],
-        per_device_train_batch_size=batch_size,
-        # per_device_eval_batch_size=batch_size,
-        num_train_epochs=config['training']['epochs'],
-        # evaluation_strategy="steps",
-        save_strategy="steps",
-        logging_dir=config['training']['logging_dir'],
-        deepspeed=deepspeed_config_path if config.get('use_deepspeed', False) else None,
-        fp16=config.get('fp16', True),
-        report_to=["none"],
-        load_best_model_at_end=False,
-        # load_best_model_at_end=True,
-        # metric_for_best_model="cer",
-        # greater_is_better=False,
-        save_total_limit=config.get('save_total_limit', 2),
-        warmup_steps=config.get('warmup_steps', 0),
-        weight_decay=config.get('weight_decay', 0.01),
-        logging_steps=config.get('logging_steps', 10),
-        # eval_steps=config.get('eval_steps', 500),
-        eval_steps=config.get('eval_steps', 50),
-        save_steps=config.get('save_steps', 1000),
-        dataloader_drop_last=True,  # Ensure consistent batch sizes
-        remove_unused_columns=False,  # Keep all columns for our custom data collator
-        # gradient_checkpointing=True,  # Enable gradient checkpointing for memory efficiency
-        dataloader_num_workers=4,  # Add parallel data loading
-        dataloader_pin_memory=True,  # Pin memory for faster GPU transfer
-        eval_accumulation_steps=1,  # Process evaluation batches immediately to avoid memory issues
-        save_safetensors=False,
-    )
-
-    # Create callbacks
-    callbacks = []
-
-    # Add steering analysis callback
-    if config.get('log_steering_analysis', True):
-        steering_callback = SteeringAnalysisCallback(model, log_interval=config.get('steering_log_interval', 100))
-        callbacks.append(steering_callback)
-
-    # Add gradient clipping callback
-    if config.get('clip_steering_gradients', True):
-        gradient_callback = GradientClippingCallback(max_norm=config.get('steering_gradient_clip', 1.0))
-        callbacks.append(gradient_callback)
-
-    # Add early stopping
-    # if config.get('use_early_stopping', True):
-    #     early_stopping = EarlyStoppingCallback(early_stopping_patience=config.get('early_stopping_patience', 3))
-    #     callbacks.append(early_stopping)
-
-    # Create trainer
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=processed_dataset,
-        # eval_dataset=processed_val,
-        data_collator=data_collator,
-        # compute_metrics=compute_metrics_trainer,
-        callbacks=callbacks,
-    )
-
-    # Start training
-    print("Starting training...")
-    trainer.train(
-        resume_from_checkpoint=resume_from_checkpoint if resume_from_checkpoint is not None else False,
-    )
-
-    # Save final model
-    final_output_dir = os.path.join(config['training']['output_dir'], 'final')
-    trainer.save_model(final_output_dir)
-    tokenizer.save_pretrained(final_output_dir)
-    save_custom(model, final_output_dir)
-
-    print(f"Training completed. Model saved to {final_output_dir}")
-
-    return trainer, model
 
 
 def evaluate_layer_wise_model(model_path: str, eval_dataset_name: str, config_path: str):
@@ -499,35 +244,68 @@ def evaluate_layer_wise_model(model_path: str, eval_dataset_name: str, config_pa
     # state_dict_path = os.path.join(model_path, "pytorch_model.bin")
     # state_dict = torch.load(state_dict_path, map_location="cpu")
     # model.load_state_dict(state_dict)
-
     model.to(device)
     model.half()
     model.eval()
 
+    def filter_single_audio_path(example):
+        return len(example['audio_path']) == 1
+
+    def update_audio_paths(example):
+        """
+        Function to update the 'audio_path' for each example.
+        'example' is a dictionary representing a single row in the dataset.
+        """
+        example['audio_path'] = ["/mnt/datasets/mmau-pro/" + audio_path for audio_path in example['audio_path']]
+        return example
+
+    def flatten_list_to_string(example):
+        # We already filtered and mapped, so each 'audio_path' is guaranteed to be ['/prefix/path.wav']
+        example['audio_path'] = example['audio_path'][0]
+        return example
+
+    def prepare_dataset(batch,  feature_extractor, tokenizer, audio_column, text_column):
+        audio_path = batch[audio_column]
+
+        # compute log-Mel input features from input audio array
+        # (128, 3000), float32 for a 30s audio
+        input_features = feature_extractor(audio_path["array"], sampling_rate=audio_path["sampling_rate"]).input_features[0]
+        input_length=len(audio_path['array'])/audio_path['sampling_rate']
+    
+        # Tokenize text
+        text = batch[text_column]
+        # could also pad here, but the input batch contains only 1 data, so pointless
+        # text_tokens = tokenizer(text, return_tensors='pt', padding='longest', truncation=True)
+        text_tokens = tokenizer(text)
+
+        logging.debug(f"input_features: {input_features.shape}, dtype: {input_features.dtype}")
+        logging.debug(f"text: {text}, input_ids: {len(text_tokens['input_ids'])}")
+        logging.debug(f"attention_mask: {len(text_tokens['attention_mask'])}")
+    
+        return {
+            'input_features': input_features,  # Use 'input_features' to match training pipeline
+            'labels': text_tokens['input_ids'],  # Use 'labels' to match training pipeline  
+
+            'input_length': input_length,
+            'attention_mask': text_tokens['attention_mask'],
+            'text': text
+        }
+
+
     # Load evaluation dataset
     print("Loading dataset...")
-    parquet_dirs = config.get('parquet_dirs', [])
-    batch_size = config['training']['batch_size']
+    tmp_dataset=load_dataset("/mnt/datasets/mmau-pro")
+    test_ds=tmp_dataset['test']
 
-    # Expand parquet directories if they contain subdirectories
-    expanded_dirs = []
-    for parquet_dir in parquet_dirs:
-        if os.path.isdir(parquet_dir):
-            subdirs = [os.path.join(parquet_dir, d) for d in os.listdir(parquet_dir) 
-                      if os.path.isdir(os.path.join(parquet_dir, d))]
-            if subdirs:
-                expanded_dirs.extend(subdirs)
-            else:
-                expanded_dirs.append(parquet_dir)
-        else:
-            expanded_dirs.append(parquet_dir)
+    filtered_ds=test_ds.filter(filter_single_audio_path)
+    prefixed_ds=filtered_ds.map(update_audio_paths)
+    flattened_ds=prefixed_ds.map(flatten_list_to_string)
 
-    dataset = load_parquet_datasets_for_steermoe(expanded_dirs)
-    print(f"Dataset: {type(dataset)} {dataset}")
+    final_ds = flattened_ds.cast_column("audio_path", Audio(sampling_rate=16000))
+
 
     # Dataset is already preprocessed with input_features and labels
     # No need for additional preparation
-    processed_dataset = dataset['train']
 
     # Create validation split
     if 'validation' in dataset:
@@ -674,6 +452,7 @@ def analyze_steering_patterns(model_path: str):
         return analysis
 
     return None
+
 
 
 

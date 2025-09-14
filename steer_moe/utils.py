@@ -3,7 +3,8 @@
  * created on 16-07-2025
  * github: https://github.com/forfrt
 """
-
+from unicodedata import category
+import numpy as np
 import torch
 from datasets import load_from_disk, concatenate_datasets, DatasetDict, Audio
 import tqdm
@@ -55,6 +56,7 @@ def load_parquet_datasets(parquet_dirs):
     return dataset
 
 
+    
 def prepare_dataset(batch, audio_column, text_column, feature_extractor, tokenizer, sample_rate=16000):
     """
     Map function to process a batch: loads audio, extracts features, tokenizes text.
@@ -132,7 +134,6 @@ def prepare_dataset_from_scatch(batch, audio_column, text_column, whisper_proces
         'text': text
     }
 
-#TODO add padding class for conformer
 
 @dataclass
 class DataCollatorSpeechSeqSeqWithPadding:
@@ -323,6 +324,197 @@ class DataCollatorSpeechSeqSeqWithPadding:
             
         return batch
 
+@dataclass
+class DataCollatorSpeechSeqSeqWithPaddingPrompt:
+    """
+    Enhanced data collator for SteerMoE model that handles preprocessed audio features and labels.
+    Works with preprocessed datasets that have 'input_features' and 'labels' columns.
+    """
+    feature_extractor: Any
+    tokenizer: Any
+    # max_length: int = 1024
+    max_length: int = 448
+    audio_column: str = "input_features"  # Preprocessed audio features
+    text_column: str = "labels"  # Preprocessed tokenized labels
+    prompt_column: str = "text_prompt"
+    return_attention_mask: bool = False
+    
+    def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+        """
+        Collate a batch of preprocessed features for SteerMoE training.
+        
+        Args:
+            features: List of dictionaries with input_features, labels, etc.
+            
+        Returns:
+            Batch dictionary with padded tensors
+        """
+        batch_size = len(features)
+        
+        # Handle preprocessed audio features
+        audio_features = []
+        for feature in features:
+            if self.audio_column in feature:
+                audio_feat = feature[self.audio_column]
+                if isinstance(audio_feat, torch.Tensor):
+                    audio_features.append(audio_feat)
+                else:
+                    audio_features.append(torch.tensor(audio_feat, dtype=torch.float32))
+            else:
+                raise KeyError(f"Expected '{self.audio_column}' in features")
+        
+        # Pad audio features to same length (these are already processed Whisper features)
+        audio_features=[{"input_features": audio_feat} for audio_feat in audio_features]
+        if audio_features:
+            batch_audio=self.feature_extractor.pad(audio_features, return_tensors="pt").input_features  #TODO use redefined padding class
+        else:
+            batch_audio = torch.empty(batch_size, 128, 3000, dtype=torch.float32)
+
+        # logging.info(f"batch_audio: {batch_audio.shape} {batch_audio.dtype} {batch_audio}")
+        
+        # Handle preprocessed labels (already tokenized)
+        labels = []
+        decoder_input_ids = []
+
+        # Get the EOS token ID once
+        eos_token_id = self.tokenizer.eos_token_id
+        if eos_token_id is None:
+            raise ValueError("Tokenizer must have an EOS token ID.")
+        eos_tensor = torch.tensor([eos_token_id], dtype=torch.long)
+        
+        for feature in features:
+            if self.text_column in feature:
+                label_ids = feature[self.text_column]
+                if isinstance(label_ids, torch.Tensor):
+                    label_ids = label_ids.squeeze()
+                else:
+                    label_ids = torch.tensor(label_ids, dtype=torch.long).squeeze()
+
+                logging.debug(f"label_ids: {label_ids.shape}, {label_ids.dtype}, {label_ids}")
+                
+                # Remove padding tokens and special tokens for processing
+                if isinstance(label_ids, torch.Tensor):
+                    # Remove padding tokens (-100 and pad_token_id)
+                    valid_mask = (label_ids != -100) & (label_ids != self.tokenizer.pad_token_id)
+                    if valid_mask.any():
+                        clean_labels = label_ids[valid_mask]
+                    else:
+                        clean_labels = torch.tensor([], dtype=torch.long)
+                else:
+                    clean_labels = torch.tensor(label_ids, dtype=torch.long)
+
+                clean_labels_with_eos = torch.cat([clean_labels, eos_tensor])
+
+                logging.debug(f"clean_labels: {clean_labels.shape}, {clean_labels.dtype}, {clean_labels}")
+
+                textual_prompt=feature[self.prompt_column]
+                
+                # Create decoder input with optional textual prompt
+                if textual_prompt is not None and len(clean_labels) > 0:
+                    # Tokenize the textual prompt
+                    prompt_tokens = self.tokenizer.encode(
+                        textual_prompt, 
+                        add_special_tokens=False,
+                        return_tensors="pt"
+                    ).squeeze(0)
+
+                    logging.debug(f"prompt_tokens: {prompt_tokens.shape}, {prompt_tokens.dtype}, {prompt_tokens}")
+                    
+                    # Combine prompt + clean labels for decoder input
+
+                    decoder_input = torch.cat([prompt_tokens, clean_labels_with_eos])
+                    empty_prompt = torch.full_like(prompt_tokens, fill_value=-100)
+                    label = torch.cat([empty_prompt, clean_labels_with_eos])
+
+                    # decoder_input = torch.cat([prompt_tokens, clean_labels])
+                    # Labels should be the original clean labels only (prompt gets masked in model)
+                    # empty_prompt=torch.full_like(prompt_tokens, fill_value=-100)
+                    # label=torch.cat([empty_prompt, clean_labels])
+
+                    # label = clean_labels.clone()
+                else:
+                    # No prompt, use clean labels directly
+                    decoder_input = clean_labels_with_eos.clone()
+                    label = clean_labels_with_eos.clone()
+
+                if decoder_input.numel() > 0 and decoder_input.size(0) > self.max_length:
+                    decoder_input = decoder_input[: self.max_length]
+                if label.numel() > 0 and label.size(0) > self.max_length:
+                    label = label[: self.max_length]
+                
+                logging.debug(f"decoder_input: {decoder_input.shape}, {decoder_input.dtype}, {decoder_input}")
+                logging.debug(f"label: {label.shape}, {label.dtype}, {label}")
+                decoder_input_ids.append(decoder_input)
+                labels.append(label)
+            else:
+                # No labels provided - create empty tensors
+                decoder_input_ids.append(torch.tensor([], dtype=torch.long))
+                labels.append(torch.tensor([], dtype=torch.long))
+
+        logging.debug(f"label: {[len(label) for label in labels]}")
+        logging.debug(f"decoder_input_ids: {[len(decoder_input_id) for decoder_input_id in decoder_input_ids]}")
+        # Pad lables 
+        label_features=[{"input_ids": input_ids} for input_ids in labels]
+        if label_features:
+            # labels_batch = self.tokenizer.pad(label_features, return_tensors="pt")
+            labels_batch = self.tokenizer.pad(
+                label_features, 
+                return_tensors="pt",
+                # padding_value=-100,
+                max_length=self.max_length,
+                padding="max_length",
+                # truncation=True,
+            )
+            logging.debug(f"labels_batch: {labels_batch}")
+            logging.debug(f"labels_batch['input_ids']: {labels_batch['input_ids'].shape}, {labels_batch['input_ids'].dtype}, {labels_batch['input_ids']}")
+            logging.debug(f"labels_batch['attention_mask']: {labels_batch['attention_mask'].shape}, {labels_batch['attention_mask'].dtype}, {labels_batch['attention_mask']}")
+
+            batch_labels = labels_batch["input_ids"]
+            batch_labels = batch_labels.masked_fill(labels_batch.attention_mask.ne(1), -100)
+            # if (batch_labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
+            #     batch_labels = batch_labels[:, 1:]
+        else:
+            batch_labels = torch.empty(batch_size, 0, dtype=torch.long)
+
+        logging.debug(f"batch_labels: {batch_labels.shape}, {batch_labels.dtype}, {batch_labels}")
+
+        # Pad prompt_tokens+labels
+        input_features=[{"input_ids": input_ids} for input_ids in decoder_input_ids]
+        if label_features:
+            # input_ids_batch = self.tokenizer.pad(input_features, return_tensors="pt")
+            input_ids_batch = self.tokenizer.pad(
+                input_features, 
+                return_tensors="pt",
+                # padding_value=-100,
+                max_length=self.max_length,
+                padding="max_length",
+                # truncation=True,
+            )
+            # logging.debug(f"input_ids_batch: {input_ids_batch}")
+            # logging.debug(f"input_ids_batch['input_ids']: {input_ids_batch['input_ids'].shape}, {input_ids_batch['input_ids'].dtype}, {input_ids_batch['input_ids']}")
+            # logging.debug(f"input_ids_batch['attention_mask']: {input_ids_batch['attention_mask'].shape}, {input_ids_batch['attention_mask'].dtype}, {input_ids_batch['attention_mask']}")
+
+            batch_input_ids = input_ids_batch["input_ids"]
+            # do not turn pads into -100, keep pad_token_id; the llm embed cannot understand -100
+            # batch_input_ids = batch_input_ids.masked_fill(input_ids_batch.attention_mask.ne(1), -100)
+        else:
+            batch_input_ids = torch.empty(batch_size, 0, dtype=torch.long)
+
+        logging.debug(f"batch_input_ids: {batch_input_ids.shape}, {batch_input_ids.dtype}, {batch_input_ids}")
+        
+        # Create final batch - use different key name for audio to match model expectations
+        batch = {
+            "input_features": batch_audio,  # Model expects audio_waveform parameter
+            "decoder_input_ids": batch_input_ids,
+            "labels": batch_labels,
+            #TODO add "input_lengths"
+        }
+        
+        # if self.return_attention_mask:
+        #     batch["attention_mask"] = batch_attention_mask
+            
+        return batch
+    
 
 @dataclass  
 class DataCollatorSpeechSeqSeqWithPaddingLegacy:
@@ -352,4 +544,196 @@ class DataCollatorSpeechSeqSeqWithPaddingLegacy:
 
         batch["labels"] = labels
 
+        return batch
+
+
+@dataclass
+class DataCollatorSpeechSeqSeqWithPaddingForConformer:
+    """
+    Enhanced data collator for SteerMoE model that handles preprocessed audio features and labels.
+    Works with preprocessed datasets that have 'input_features' and 'labels' columns.
+    """
+    feature_extractor: Any
+    tokenizer: Any
+    textual_prompt: Optional[str] = None
+    # max_length: int = 1024
+    max_length: int = 448
+    audio_column: str = "input_features"  # Preprocessed audio features
+    text_column: str = "labels"  # Preprocessed tokenized labels
+    return_attention_mask: bool = False
+    
+    def __call__(self, features: List) -> Dict[str, torch.Tensor]:
+        """
+        Collate a batch of preprocessed features for SteerMoE training.
+        
+        Args:
+            features: List of dictionaries with input_features, labels, etc.
+            
+        Returns:
+            Batch dictionary with padded tensors
+        """
+        # We assume all samples have the same sample rate,
+        # so we use the rate from the first sample (sample[0]) as the reference.
+        batch_size = len(features)
+        if "sample_rate" in features[0]:
+            Sample_Rate = features[0]["sample_rate"]
+        else:
+            raise ValueError("Features must contain 'sample_rate' for processing, please check your dataset")
+            
+        
+        # Handle preprocessed audio features
+        audio_features = []
+        for feature in features:
+            if self.audio_column in feature:
+                audio_feat = feature[self.audio_column]
+                audio_features.append(np.array(audio_feat, dtype=np.int16))
+            else:
+                raise KeyError(f"Expected '{self.audio_column}' in features")
+
+        
+        # Feature Extraction
+        batch_audio,lengths,duration = self.feature_extractor(audio_features,Sample_Rate)
+        
+
+        # logging.info(f"batch_audio: {batch_audio.shape} {batch_audio.dtype} {batch_audio}")
+        
+        # Handle preprocessed labels (already tokenized)
+        labels = []
+        decoder_input_ids = []
+
+        # Get the EOS token ID once
+        eos_token_id = self.tokenizer.eos_token_id
+        if eos_token_id is None:
+            raise ValueError("Tokenizer must have an EOS token ID.")
+        eos_tensor = torch.tensor([eos_token_id], dtype=torch.long)
+        
+        for feature in features:
+            if self.text_column in feature:
+                label_ids = feature[self.text_column]
+                if isinstance(label_ids, torch.Tensor):
+                    label_ids = label_ids.squeeze()
+                else:
+                    label_ids = torch.tensor(label_ids, dtype=torch.long).squeeze()
+
+                # logging.debug(f"label_ids: {label_ids.shape}, {label_ids.dtype}, {label_ids}")
+                
+                # Remove padding tokens and special tokens for processing
+                if isinstance(label_ids, torch.Tensor):
+                    # Remove padding tokens (-100 and pad_token_id)
+                    valid_mask = (label_ids != -100) & (label_ids != self.tokenizer.pad_token_id)
+                    if valid_mask.any():
+                        clean_labels = label_ids[valid_mask]
+                    else:
+                        clean_labels = torch.tensor([], dtype=torch.long)
+                else:
+                    clean_labels = torch.tensor(label_ids, dtype=torch.long)
+
+                clean_labels_with_eos = torch.cat([clean_labels, eos_tensor])
+
+                # logging.debug(f"clean_labels: {clean_labels.shape}, {clean_labels.dtype}, {clean_labels}")
+                
+                # Create decoder input with optional textual prompt
+                if self.textual_prompt is not None and len(clean_labels) > 0:
+                    # Tokenize the textual prompt
+                    prompt_tokens = self.tokenizer.encode(
+                        self.textual_prompt, 
+                        add_special_tokens=False,
+                        return_tensors="pt"
+                    ).squeeze(0)
+
+                    # logging.debug(f"prompt_tokens: {prompt_tokens.shape}, {prompt_tokens.dtype}, {prompt_tokens}")
+                    
+                    # Combine prompt + clean labels for decoder input
+
+                    decoder_input = torch.cat([prompt_tokens, clean_labels_with_eos])
+                    empty_prompt = torch.full_like(prompt_tokens, fill_value=-100)
+                    label = torch.cat([empty_prompt, clean_labels_with_eos])
+
+                    # decoder_input = torch.cat([prompt_tokens, clean_labels])
+                    # Labels should be the original clean labels only (prompt gets masked in model)
+                    # empty_prompt=torch.full_like(prompt_tokens, fill_value=-100)
+                    # label=torch.cat([empty_prompt, clean_labels])
+
+                    # label = clean_labels.clone()
+                else:
+                    # No prompt, use clean labels directly
+                    decoder_input = clean_labels_with_eos.clone()
+                    label = clean_labels_with_eos.clone()
+
+                if decoder_input.numel() > 0 and decoder_input.size(0) > self.max_length:
+                    decoder_input = decoder_input[: self.max_length]
+                if label.numel() > 0 and label.size(0) > self.max_length:
+                    label = label[: self.max_length]
+                
+                # logging.debug(f"decoder_input: {decoder_input.shape}, {decoder_input.dtype}, {decoder_input}")
+                # logging.debug(f"label: {label.shape}, {label.dtype}, {label}")
+                decoder_input_ids.append(decoder_input)
+                labels.append(label)
+            else:
+                # No labels provided - create empty tensors
+                decoder_input_ids.append(torch.tensor([], dtype=torch.long))
+                labels.append(torch.tensor([], dtype=torch.long))
+
+        # logging.debug(f"label: {[len(label) for label in labels]}")
+        # logging.debug(f"decoder_input_ids: {[len(decoder_input_id) for decoder_input_id in decoder_input_ids]}")
+        # Pad lables 
+        label_features=[{"input_ids": input_ids} for input_ids in labels]
+        if label_features:
+            # labels_batch = self.tokenizer.pad(label_features, return_tensors="pt")
+            labels_batch = self.tokenizer.pad(
+                label_features, 
+                return_tensors="pt",
+                # padding_value=-100,
+                max_length=self.max_length,
+                padding="max_length",
+                # truncation=True,
+            )
+            # logging.debug(f"labels_batch: {labels_batch}")
+            # logging.debug(f"labels_batch['input_ids']: {labels_batch['input_ids'].shape}, {labels_batch['input_ids'].dtype}, {labels_batch['input_ids']}")
+            # logging.debug(f"labels_batch['attention_mask']: {labels_batch['attention_mask'].shape}, {labels_batch['attention_mask'].dtype}, {labels_batch['attention_mask']}")
+
+            batch_labels = labels_batch["input_ids"]
+            batch_labels = batch_labels.masked_fill(labels_batch.attention_mask.ne(1), -100)
+            # if (batch_labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
+            #     batch_labels = batch_labels[:, 1:]
+        else:
+            batch_labels = torch.empty(batch_size, 0, dtype=torch.long)
+
+        # logging.debug(f"batch_labels: {batch_labels.shape}, {batch_labels.dtype}, {batch_labels}")
+
+        # Pad prompt_tokens+labels
+        input_features=[{"input_ids": input_ids} for input_ids in decoder_input_ids]
+        if label_features:
+            # input_ids_batch = self.tokenizer.pad(input_features, return_tensors="pt")
+            input_ids_batch = self.tokenizer.pad(
+                input_features, 
+                return_tensors="pt",
+                # padding_value=-100,
+                max_length=self.max_length,
+                padding="max_length",
+                # truncation=True,
+            )
+            # logging.debug(f"input_ids_batch: {input_ids_batch}")
+            # logging.debug(f"input_ids_batch['input_ids']: {input_ids_batch['input_ids'].shape}, {input_ids_batch['input_ids'].dtype}, {input_ids_batch['input_ids']}")
+            # logging.debug(f"input_ids_batch['attention_mask']: {input_ids_batch['attention_mask'].shape}, {input_ids_batch['attention_mask'].dtype}, {input_ids_batch['attention_mask']}")
+
+            batch_input_ids = input_ids_batch["input_ids"]
+            # do not turn pads into -100, keep pad_token_id; the llm embed cannot understand -100
+            # batch_input_ids = batch_input_ids.masked_fill(input_ids_batch.attention_mask.ne(1), -100)
+        else:
+            batch_input_ids = torch.empty(batch_size, 0, dtype=torch.long)
+
+        # logging.debug(f"batch_input_ids: {batch_input_ids.shape}, {batch_input_ids.dtype}, {batch_input_ids}")
+        
+        # Create final batch - use different key name for audio to match model expectations
+        batch = {
+            "input_features": batch_audio,  # Model expects audio_waveform parameter
+            "decoder_input_ids": batch_input_ids,
+            "labels": batch_labels,
+            "input_lengths":lengths 
+        }
+        
+        # if self.return_attention_mask:
+        #     batch["attention_mask"] = batch_attention_mask
+            
         return batch

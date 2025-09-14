@@ -1,8 +1,13 @@
 import torch
 
-from .conformer_module.conformer_encoder import ConformerEncoder
-from .conformer_module.transformer_decoder import TransformerDecoder
 
+
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from steer_moe.conformer_module.conformer_encoder import ConformerEncoder
+from steer_moe.conformer_module.transformer_decoder import TransformerDecoder
 
 class FireRedAsrAed(torch.nn.Module):
     @classmethod
