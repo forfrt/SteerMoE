@@ -1,0 +1,91 @@
+# Layer-wise SteerMoE Configuration
+
+# Whisper Encoder Configuration
+conformer_encoder:
+  model_path: "/mnt/models/FireRedTeam/FireRedASR-AED-L"
+
+
+# LLM Decoder Configuration
+llm_decoder:
+  # model_name: "/root/autodl-tmp/model/Qwen2.5-7B-Ins-1M/"
+  # model_name: "/root/autodl-tmp/model/Qwen2.5-3B-Instruct/"
+  model_name: "/mnt/models/Qwen2.5-3B-Instruct/"
+  max_length: 512
+  use_cache: false  # Disable cache during training
+
+# Steering Configuration
+steering:
+  num_experts: 8
+  steering_scale: 0.1
+  use_layer_scales: true
+  use_gradient_clipping: true
+  steering_gradient_clip: 1.0
+
+# Training Configuration
+training:
+  output_dir: "/mnt/results/linear_qwen3b_conformer_aed_libri"
+  logging_dir: "/mnt/logs/linear_qwen3b_conformer_libri"
+  batch_size: 3
+  epochs: 5
+  learning_rate: 1e-3
+  steering_learning_rate: 1e-2
+  router_learning_rate: 1e-3
+  weight_decay: 0.01
+  warmup_steps: 1000
+  gradient_clipping: 1.0
+  fp16: true
+  use_deepspeed: true  # Enable DeepSpeed for multi-GPU efficiency
+
+# Dataset Configuration
+parquet_dirs:
+  - "/mnt/processed_datasets/librispeech_asr_for_conformer/test.clean/"
+  
+
+audio_column: "audio"
+text_column: "text"
+sample_rate: 16000
+max_audio_length: 30.0  # seconds
+# max_text_length: 2048
+max_text_length: 448
+filter_dataset: True
+
+# Textual Prompt Configuration
+# textual_prompt: "请转写以下音频内容为文字："  # Chinese prompt for ASR task
+# textual_prompt: "转录文字，兼顾专有名词: "  # Chinese prompt for ASR task
+textual_prompt: "please transcribe the audio content into text: "  # Chinese prompt for ASR task
+
+# Model Configuration
+max_prompt_tokens: 2048
+use_adapter: true
+save_total_limit: 2
+logging_steps: 100  # Reduced from 10 to 100 for less overhead
+eval_steps: 10000000    # Reduced evaluation frequency for better performance
+save_steps: 1000
+
+# Callbacks Configuration
+log_steering_analysis: true
+steering_log_interval: 100
+clip_steering_gradients: true
+use_early_stopping: true
+early_stopping_patience: 3
+
+# Evaluation Configuration
+eval_dataset_name: "librispeech_test_clean"  # Optional
+eval_batch_size: 4
+
+# DeepSpeed Configuration (if using)
+deepspeed_config: "configs/stage2.json"
+
+# Logging Configuration
+report_to: ["none"]  # Disable wandb/tensorboard
+logging_strategy: "steps"
+evaluation_strategy: "epoch"
+save_strategy: "epoch"
+load_best_model_at_end: true
+metric_for_best_model: "cer"
+greater_is_better: false 
+
+# pooling size setting to downsample the audio features, https://huggingface.co/zai-org/glm-4-voice-tokenizer/blob/main/config.json
+pooling_kernel_size: 4
+pooling_position: 32
+pooling_type: "avg"
