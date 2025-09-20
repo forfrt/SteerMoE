@@ -102,7 +102,16 @@ def save_custom(model, path):
     os.makedirs(path, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(path, "pytorch_model.bin"))
 
-
+@staticmethod
+def load_custom(path, conformer_encoder_path, llm_decoder, **kwargs):
+    model = SteerMoEEfficientLayerWiseModelForConformer(
+        conformer_encoder_path=conformer_encoder_path,
+        llm_decoder=llm_decoder,
+        **kwargs
+    )
+    sd = torch.load(os.path.join(path, "pytorch_model.bin"), map_location="cpu")
+    model.load_state_dict(sd, strict=True)
+    return model
 
 
 def train_layer_wise_steermoe_for_conformer(config_path: str = 'configs/layer_wise.yaml',
@@ -163,7 +172,7 @@ def train_layer_wise_steermoe_for_conformer(config_path: str = 'configs/layer_wi
     # Create main model
     logging.info("Creating SteerMoE model...")
     model = SteerMoEEfficientLayerWiseModelForConformer(
-        conformer_encoder_path=config['conformer_encoder']['model_path']+"/asr_encoder.pth.tar",
+        conformer_encoder_path=config['conformer_encoder']['model_path']+"/model.pth.tar",
         llm_decoder=llm_decoder,
         num_experts=config['steering']['num_experts'],
         steering_scale=config['steering']['steering_scale'],
@@ -316,6 +325,198 @@ def train_layer_wise_steermoe_for_conformer(config_path: str = 'configs/layer_wi
     return trainer, model
 
 
+
+def evaluate_layer_wise_model(model_path: str, eval_dataset_name: str, config_path: str, local_rank):
+    """Evaluate a trained layer-wise SteerMoE model."""
+    device = torch.device("cuda", local_rank)
+    # Load configuration
+    config = load_config(config_path)
+
+
+    logging.info("Loading LLM decoder...")
+    llm_decoder = AutoModelForCausalLM.from_pretrained(config['llm_decoder']['model_name'])
+    llm_decoder.eval()
+    for p in llm_decoder.parameters():
+        p.requires_grad = False
+
+    logging.info("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(config['llm_decoder']['model_name'])
+    
+    """
+    -----------------------------------------------
+    Change Feature Extractor To Conformer Version
+    -----------------------------------------------
+    """
+    cmvn_path = os.path.join(config['conformer_encoder']['model_path'], "cmvn.ark") 
+    feature_extractor = ASRFeatExtractor(cmvn_path)
+    """
+    -----------------------------------------------
+    Change Feature Extractor To Conformer Version
+    -----------------------------------------------
+    """
+    
+    # Add padding token if not present
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+
+
+
+
+    print("Creating SteerMoE model...")
+    model = load_custom(
+        model_path, config['conformer_encoder']['model_path']+"/model.pth.tar", llm_decoder,
+        num_experts=config['steering']['num_experts'],
+        max_prompt_tokens=config.get('max_prompt_tokens', 2048),
+        use_adapter=config.get('use_adapter', True),
+    )
+
+    # model = SteerMoEEfficientLayerWiseModel(
+    #     whisper_encoder=layer_wise_whisper,
+    #     llm_decoder=llm_decoder,
+    #     num_experts=config['steering']['num_experts'],
+    #     max_prompt_tokens=config.get('max_prompt_tokens', 2048),
+    #     use_adapter=config.get('use_adapter', True),
+    # )
+
+    # # 2. LOAD the saved state dictionary from your checkpoint.
+    # #    map_location='cpu' is important to avoid one process using all GPU memory.
+    # print(f"Loading model state from: {model_path}")
+    # state_dict_path = os.path.join(model_path, "pytorch_model.bin")
+    # state_dict = torch.load(state_dict_path, map_location="cpu")
+    # model.load_state_dict(state_dict)
+
+    model.to(device)
+    model.half()
+    model.eval()
+
+    # Load evaluation dataset
+    print("Loading dataset...")
+    parquet_dirs = config.get('parquet_dirs', [])
+    batch_size = config['training']['batch_size']
+
+    # Expand parquet directories if they contain subdirectories
+    expanded_dirs = []
+    for parquet_dir in parquet_dirs:
+        if os.path.isdir(parquet_dir):
+            subdirs = [os.path.join(parquet_dir, d) for d in os.listdir(parquet_dir) 
+                      if os.path.isdir(os.path.join(parquet_dir, d))]
+            if subdirs:
+                expanded_dirs.extend(subdirs)
+            else:
+                expanded_dirs.append(parquet_dir)
+        else:
+            expanded_dirs.append(parquet_dir)
+
+    dataset = load_parquet_datasets_for_steermoe(expanded_dirs)
+    print(f"Dataset: {type(dataset)} {dataset}")
+
+    # Dataset is already preprocessed with input_features and labels
+    # No need for additional preparation
+    processed_dataset = dataset['train']
+
+    # Create validation split
+    if 'validation' in dataset:
+        processed_val = dataset['validation']
+    else:
+        # Split train into train/val
+        split_dataset = processed_dataset.train_test_split(test_size=0.05, seed=42)
+        processed_val = split_dataset['test']
+        processed_dataset = split_dataset['train']
+
+    textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")  # Default Chinese prompt
+    max_length = config.get('max_text_length', 512)
+    
+    # Create data collator with fixed max length for consistent evaluation
+    data_collator = DataCollatorSpeechSeqSeqWithPaddingForConformer(
+        feature_extractor=feature_extractor,
+        tokenizer=tokenizer,
+        textual_prompt=textual_prompt,
+        max_length=max_length,  # Fixed max length
+        audio_column="input_features",  # Use preprocessed audio features
+        text_column="labels"  # Use preprocessed labels
+    )
+
+    # Create a DataLoader for the evaluation set
+    # NOTE: You should set a reasonable batch size here. 1 is safe, but you can try larger.
+    eval_batch_size = config['training'].get('per_device_eval_batch_size', 1) 
+    eval_dataloader = DataLoader(
+        processed_val,
+        batch_size=eval_batch_size,
+        collate_fn=data_collator
+    )
+
+    all_preds = []
+    all_labels = []
+
+    print("Starting manual evaluation loop...")
+    textual_prompt = config.get('textual_prompt', "请转写以下音频内容为文字：")
+    prompt_ids = tokenizer(textual_prompt, return_tensors="pt").input_ids.to(device)
+
+    eos_token_id = tokenizer.eos_token_id
+    if eos_token_id is None:
+        # Fallback for some tokenizers
+        eos_token_id = tokenizer.pad_token_id
+        logging.warning(f"EOS token not found, using PAD token as EOS: {eos_token_id}")
+
+    for step, batch in enumerate(tqdm.tqdm(eval_dataloader)):
+        # Move batch to device
+        batch = {k: v.to(device) for k, v in batch.items()}
+        batch_prompt_ids = prompt_ids.expand(batch["input_features"].shape[0], -1)
+        
+        with torch.no_grad():
+            # Use model.generate() for efficient decoding
+            # You might need to adjust max_length and other generation parameters
+            generated_ids = model.generate(
+                input_features=batch["input_features"],
+                input_lengths=batch["input_lengths"],
+                decoder_input_ids=batch_prompt_ids,
+                # should not be the decoder_input_ids as it's used in the autoregressive training and contains the labels
+                # decoder_input_ids=batch["decoder_input_ids"],
+                max_new_tokens=512,  # Adjust as needed
+                eos_token_id=eos_token_id,
+            )
+
+        # Decode predictions
+        decoded_preds = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+        cleaned_preds = []
+        for pred in decoded_preds:
+            # Find the prompt in the prediction and take the text after it
+            if textual_prompt in pred:
+                cleaned_preds.append(pred.split(textual_prompt, 1)[1])
+            else:
+                cleaned_preds.append(pred) # Fallback if prompt is not found
+        # logging.info(f"decoded_preds: {decoded_preds}")
+        logging.info(f"decoded_preds: {cleaned_preds}")
+        
+        # Prepare and decode labels
+        labels = batch["labels"]
+        labels[labels == -100] = tokenizer.pad_token_id # replace -100 with pad_token_id for decoding
+        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        logging.info(f"decoded_labels: {decoded_labels}")
+
+        all_preds.extend(decoded_preds)
+        all_labels.extend(decoded_labels)
+        
+        # Optional: clean up memory
+        del batch, generated_ids, labels
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    # Now compute metrics on all the decoded strings
+    print("Computing final metrics...")
+    cer_metric = load_metric('./scripts/cer.py')
+    wer_metric = load_metric('./scripts/wer.py')
+    
+    cer = cer_metric.compute(predictions=all_preds, references=all_labels)
+    wer = wer_metric.compute(predictions=all_preds, references=all_labels)
+    
+    results = {"cer": cer, "wer": wer}
+    print(f"Evaluation results: {results}")
+
+    return results
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -344,9 +545,10 @@ if __name__ == "__main__":
             resume_from_checkpoint=args.resume_from
         )
     elif args.mode == 'eval':
+        print(args.model_path)
         if args.model_path is None:
             raise ValueError("Model path required for evaluation")
-        evaluate_layer_wise_model(args.model_path, args.eval_dataset, args.config)
+        evaluate_layer_wise_model(args.model_path, args.eval_dataset, args.config, args.local_rank)
     elif args.mode == 'analyze':
         if args.model_path is None:
             raise ValueError("Model path required for analysis")

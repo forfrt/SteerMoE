@@ -30,10 +30,12 @@ def prepare_dataset(batch, audio_column, text_column, feature_extractor, tokeniz
     text = batch[text_column]
     # could also pad here, but the input batch contains only 1 data, so pointless
     # text_tokens = tokenizer(text, return_tensors='pt', padding='longest', truncation=True)
+    logging.debug(f"text: {type(text)}, {text}")
     text_tokens = tokenizer(text)
+    logging.debug(f"input_ids: {len(text_tokens['input_ids'])}")
 
     logging.debug(f"input_features: {input_features.shape}, dtype: {input_features.dtype}")
-    logging.debug(f"text: {text}, input_ids: {len(text_tokens['input_ids'])}")
+    logging.debug(f"input_length: {input_length}")
     logging.debug(f"attention_mask: {len(text_tokens['attention_mask'])}")
     
     return {

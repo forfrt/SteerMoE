@@ -36,18 +36,25 @@ def prepare_dataset(batch,  feature_extractor, tokenizer, sampling_rate):
     input_features = feature_extractor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
     input_length=len(audio['array'])/audio['sampling_rate']
 
-    text_prompt="please answer the following question by choosing the correct answer from the choices; The question is : " \
+    if isinstance(batch["choices"], list):
+        text_prompt="please answer the following question by choosing the correct answer from the choices; The question is : " \
         +batch["question"]+" The choices are "+', '.join(batch["choices"])
+        logging.debug(f"list text_prompt: {text_prompt}")
+    else:
+        text_prompt="please answer the following question by choosing the correct answer from the choices; The question is : " \
+            +batch["question"]+" The choices are "+str(batch["choices"])
+        logging.debug(f"str text_prompt: {text_prompt}")
 
     # Tokenize text
     text = batch['answer']
     # could also pad here, but the input batch contains only 1 data, so pointless
     # text_tokens = tokenizer(text, return_tensors='pt', padding='longest', truncation=True)
+    logging.debug(f"text: {type(text)}, {text}")
     text_tokens = tokenizer(text)
+    logging.debug(f"input_ids: {len(text_tokens['input_ids'])}")
 
     logging.debug(f"input_features: {input_features.shape}, dtype: {input_features.dtype}")
-    logging.debug(f"text: {text}, input_ids: {len(text_tokens['input_ids'])}")
-    logging.debug(f"text_prompt: {text_prompt}")
+    logging.debug(f"input_length: {input_length}")
     logging.debug(f"attention_mask: {len(text_tokens['attention_mask'])}")
 
     return {

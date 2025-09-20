@@ -12,7 +12,7 @@ logging.basicConfig(
 
 from preprocess_utils import prepare_dataset_for_conformer
 
-def create_librispeech_hf_dataset_for_conformer(parquets_path , output_path, llm_tokenizer, sample_rate =16000):
+def create_librispeech_hf_dataset_for_conformer(parquets_path , output_path, llm_tokenizer, split = "train",sample_rate =16000):
     """
     Generates a Hugging Face audio dataset from the AISHELL dataset.
 
@@ -39,7 +39,7 @@ def create_librispeech_hf_dataset_for_conformer(parquets_path , output_path, llm
         logging.info(f"processing batch: {batch}")
 
         try:
-            tmp_dataset = load_dataset("parquet", data_files=batch, split='train', cache_dir='/mnt/.cache/')
+            tmp_dataset = load_dataset("parquet", data_files=batch, split=split, cache_dir='/mnt/.cache/')
         except:
             logging.error(f"batch: {batch}, i: {i}")
             logging.error(traceback.format_exc())
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     # output_dataset_path = '/mnt/processed_datasets/librispeech_asr/train.clean.360'
 
     # create_librispeech_hf_dataset(whisper_feature_extractor, llm_tokenizer, parquets_path, output_dataset_path)
-    parquets_paths = ["train.clean.100","train.clean.360","train.other.500"]
+    parquets_paths = ["test.clean"]
     for p in parquets_paths:
         parquets_path=f'/mnt/datasets/librispeech_asr/all/{p}'
         output_dataset_path = f'/mnt/processed_datasets/librispeech_asr_for_conformer/{p}'

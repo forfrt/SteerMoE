@@ -265,6 +265,95 @@ class EfficientLayerWiseSteeringWhisperEncoder(nn.Module):
         if return_gating:
             return x, gating_scores_list
         return x
+
+    def forward(self, mel_features, return_gating=False):
+        # Get the speech encoder
+        if hasattr(self.original_encoder, 'speech_encoder'):
+            speech_encoder = self.original_encoder.speech_encoder
+        else:
+            speech_encoder = self.original_encoder
+            
+        # Apply initial processing (conv layers, positional embedding, etc.)
+        model_device = self.steering_vectors.device
+        model_dtype = self.steering_vectors.dtype 
+
+        logging.debug(f"model_device: {model_device}, model_dtype: {model_dtype}")
+        speech_encoder=speech_encoder.to(model_device)
+        x = mel_features.to(device=model_device, dtype=model_dtype)
+        logging.debug(f"original x: {x.shape}, {x.dtype}, {x.device}, {x}")
+
+        # x=self.original_encoder._mask_input_features
+        
+        # If the speech encoder has conv layers and embeddings, apply them first
+        if hasattr(speech_encoder, 'conv1'):
+            # x = torch.nn.functional.gelu(speech_encoder.conv1(x.transpose(1, 2)))
+            x = torch.nn.functional.gelu(speech_encoder.conv1(x))
+            x = torch.nn.functional.gelu(speech_encoder.conv2(x))
+            # x = x.transpose(1, 2)
+            x=x.permute(0, 2, 1)
+        else:
+            logging.error(f"no conv1 layer found")
+
+        logging.debug(f"conv1+conv2 x: {x.shape}, {x.dtype}, {x.device}, {x}")
+            
+        if hasattr(speech_encoder, 'embed_positions'):
+            # positions = speech_encoder.embed_positions.weight[:x.size(1)]
+            positions = speech_encoder.embed_positions.weight[:x.size(1)].to(model_device)
+            x = (x + positions) * speech_encoder.embed_scale
+        else:
+            logging.error(f"no embed_positions layer found")
+
+        logging.debug(f"embed_positions x: {x.shape}, {x.dtype}, {x.device}, {x}")
+            
+        # Apply dropout if present
+        if hasattr(speech_encoder, 'dropout'):
+            x = nn.functional.dropout(x, p=speech_encoder.dropout, training=speech_encoder.training)
+        else:
+            logging.error(f"no dropout layer found")
+        
+        # Now process through layers with steering
+        gating_scores_list = []
+        
+        # Get the encoder layers
+        if hasattr(speech_encoder, 'layers'):
+            encoder_layers = speech_encoder.layers
+        else:
+            logging.error(f"no attention layers found")
+            encoder_layers = []
+            
+        for layer_idx, layer in enumerate(encoder_layers):
+            layer=layer.to(model_device)
+            if layer_idx >= self.num_layers:
+                # More layers than we have steering for, process normally
+                x = layer(x)
+                continue
+                
+            # Apply original layer
+            layer_output = layer(x)[0]
+            
+            x = layer_output
+
+            if layer_idx + 1 == self.pooling_position and self.pooling_kernel_size is not None:
+                x = x.permute(0, 2, 1)
+                if x.shape[-1] % self.pooling_kernel_size != 0:
+                    x = torch.nn.functional.pad(x, (
+                    0, self.pooling_kernel_size - x.shape[-1] % self.pooling_kernel_size))
+                x = self.pooling_layer(x).permute(0, 2, 1)
+
+
+        logging.debug(f"layers x: {x.shape}, {x.dtype}, {x}")
+        
+        # Apply final layer norm if exists
+        if hasattr(speech_encoder, 'layer_norm'):
+            x = speech_encoder.layer_norm(x)
+        else:
+            logging.error(f"no layer_norm layers found")
+
+        logging.debug(f"layer_norm x: {x.shape}, {x.dtype}, {x}")
+            
+        if return_gating:
+            return x, gating_scores_list
+        return x
     
     def get_steering_analysis(self, gating_scores_list):
         """

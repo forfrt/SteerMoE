@@ -116,6 +116,11 @@ class EfficientLayerWiseSteeringConformerEncoder(nn.Module):
         # Layer-specific scaling factors
         self.layer_scales = nn.Parameter(torch.ones(self.num_layers) * steering_scale)
         
+        # for para in self.router.parameters():
+        #     para.requires_grad = False
+        # self.layer_scales.requires_grad = False
+        # self.steering_vectors.requires_grad = False
+        
         # Freeze the original encoder
         for param in self.original_encoder.parameters():
             param.requires_grad = False
@@ -326,6 +331,9 @@ class SteerMoEEfficientLayerWiseModelForConformer(nn.Module):
                 self.prompt_proj = None
         else:
             self.prompt_proj = prompt_proj
+            
+        # for para in self.prompt_proj.parameters():
+        #     para.requires_grad = False
 
 
     def forward(self, audio_waveform=None, input_features=None,input_lengths=None, decoder_input_ids=None, labels=None, 
@@ -406,7 +414,7 @@ class SteerMoEEfficientLayerWiseModelForConformer(nn.Module):
         # 6. Concatenate audio prompts with text embeddings
         # Format: [audio_prompts, text_embeds]
         # inputs_embeds = torch.cat([text_embeds,audio_prompts ], dim=1)
-        inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)   # TODO Check Normalization
+        inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)   
         # inputs_embeds: (batch, audio_seq_len + text_seq_len, decoder_dim)
 
         # 7. Handle labels for training
@@ -483,7 +491,63 @@ class SteerMoEEfficientLayerWiseModelForConformer(nn.Module):
 
     def get_device(self):
         return next(self.parameters()).device
+    
+    def generate(self,input_features=None,input_lengths=None, decoder_input_ids=None, **kwargs):
+        """
+        Generates token sequences autoregressively.
+        This method prepares the audio prompt embeddings and then calls the
+        underlying LLM decoder's generate method.
+        
+        Args:
+            input_features: The preprocessed audio features from the FeatureExtractor.
+            **kwargs: Additional arguments to be passed to the llm_decoder.generate() method,
+                      such as max_new_tokens, num_beams, do_sample, etc.
+        """
+        # Ensure the model is in evaluation mode for generation
+        self.eval()
+    
+        h_audio,input_lengths,_,_ = self.conformer_encoder._forward_with_steering(input_features, input_lengths=input_lengths ,pad = True, return_full_output=True)
 
+
+        # 2. Project to decoder dimension if needed
+        if self.use_adapter and self.prompt_proj is not None:
+            audio_prompts = self.prompt_proj(h_audio)
+        else:
+            audio_prompts = h_audio
+
+
+        if self.max_prompt_tokens is not None:
+            audio_prompts = audio_prompts[:, :self.max_prompt_tokens, :]
+
+
+        if hasattr(self.llm_decoder, 'model') and hasattr(self.llm_decoder.model, 'embed_tokens'):
+            # LLaMA-like decoder (Qwen, LLaMA, etc.)
+            text_embeds = self.llm_decoder.model.embed_tokens(decoder_input_ids)
+        elif hasattr(self.llm_decoder, 'transformer') and hasattr(self.llm_decoder.transformer, 'wte'):
+            # GPT-2 like decoder
+            text_embeds = self.llm_decoder.transformer.wte(decoder_input_ids)
+        elif hasattr(self.llm_decoder, 'get_input_embeddings'):
+            # Generic approach
+            text_embeds = self.llm_decoder.get_input_embeddings()(decoder_input_ids)
+        else:
+            raise ValueError("Could not find embedding method for decoder. Please adapt for your LLM.")
+
+        
+
+            
+
+        inputs_embeds = torch.cat([audio_prompts, text_embeds], dim=1)   
+        # inputs_embeds: (batch, audio_seq_len + text_seq_len, decoder_dim)
+
+
+        batch_size, total_seq_len = inputs_embeds.shape[:2]
+        attention_mask = torch.ones(batch_size, total_seq_len, device=inputs_embeds.device, dtype=torch.long)
+            
+        return self.llm_decoder.generate(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask,
+            **kwargs  # Pass through all other generation settings
+        )
 
 # # Comparison of approaches
 # def compare_router_approaches():
