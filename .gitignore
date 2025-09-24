@@ -1,6 +1,4 @@
-# Local files
-# *.local
-
+paper/
 # Byte-compiled / optimized / DLL files
 output/
 __pycache__/
@@ -189,4 +187,10 @@ tags
 *.swo
 
 .nfs*
+
+# MacOS
+.DS_Store
+
+# Local files
+scripts.local
 
