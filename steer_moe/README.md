@@ -2,6 +2,27 @@
 
 This folder contains the core implementation of the SteerMoE architecture, including model classes, layer-wise steering mechanisms, and utility functions.
 
+## Overview
+
+SteerMoE is a parameter-efficient architecture for speech-to-text models that:
+- **Freezes** the pretrained LLM decoder (e.g., Qwen, LLaMA)
+- **Trains** only the speech encoder with steering vectors managed by a Mixture-of-Experts (MoE) router
+- Uses **layer-wise steering** to adapt frozen encoder outputs to work with frozen LLM decoders
+
+### Architecture Flow
+
+```
+Audio Input → Frozen Speech Encoder → SteerMoE (Trainable) → Projection → Frozen LLM Decoder → Text Output
+```
+
+**Key Components**:
+1. **Frozen Speech Encoder**: Pre-trained Whisper or Conformer encoder (weights frozen)
+2. **SteerMoE Module**: Trainable steering vectors + MoE router (applied layer-wise)
+3. **Projection Layer**: Linear layer mapping encoder dim → LLM dim (trainable)
+4. **Frozen LLM Decoder**: Pre-trained causal language model (weights frozen)
+
+**Parameter Efficiency**: Only ~1.8M trainable parameters (0.02% of total 8.5B parameters)
+
 ## 📁 File Organization
 
 ```
@@ -597,6 +618,68 @@ print(f"Labels: {labels.shape}")
 - `load_balancing_loss()`: MoE load balancing
 - `prepare_dataset()`: Dataset preprocessing
 - `prepare_dataset_for_conformer()`: Conformer preprocessing
+
+## 🔬 Ablation Studies
+
+### LoRA Baseline (`lora_model.py`)
+
+For comparison with SteerMoE, a LoRA-based baseline is provided that:
+- Freezes the LLM decoder (same as SteerMoE)
+- Applies LoRA adapters to encoder layers instead of steering vectors
+- Uses similar interface for fair comparison
+
+**Key Differences**:
+- **SteerMoE**: Additive steering vectors with MoE routing
+- **LoRA**: Low-rank adaptation matrices applied to attention and FFN layers
+
+See `lora_model.py` for implementation details.
+
+## 📊 Key Design Decisions
+
+### Why Single Router?
+
+1. **Parameter Efficiency**: 32× reduction vs. multi-router (327K vs 10.5M params)
+2. **Generalization**: Shared router learns common routing patterns
+3. **Flexibility**: Still allows layer-specific expert selection via slicing
+
+### Why Layer-Wise Steering?
+
+1. **Fine-Grained Control**: Each layer can be adapted independently
+2. **Preserves Encoder Structure**: Original encoder remains frozen
+3. **Interpretability**: Can analyze which experts activate at which layers
+
+### Why Freeze Everything Else?
+
+1. **Parameter Efficiency**: Only train minimal adapter components
+2. **Knowledge Preservation**: Leverage pretrained representations
+3. **Training Stability**: Frozen components provide stable gradients
+4. **Transfer Learning**: Can adapt to new tasks with minimal data
+
+## 🔍 Training Flow
+
+### Data Format
+
+**Input**:
+- `input_features`: Preprocessed mel-spectrogram features
+  - Whisper: `(batch, 128, seq_len)` → processed to `(batch, seq_len, 1280)`
+  - Conformer: Raw audio → FBANK features → `(batch, seq_len, feature_dim)`
+- `decoder_input_ids`: Text token IDs (with optional textual prompt)
+- `labels`: Target token IDs (with prompt positions masked as `-100`)
+
+### Trainable vs Frozen Parameters
+
+**Trainable** (~1.8M parameters):
+- Steering vectors: `32 × 8 × 1280 = 327,680`
+- Router: `1280 × 256 = 327,680`
+- Layer scales: `32`
+- Projection: `1280 × 896 = 1,146,880`
+- **Total**: ~1.8M parameters
+
+**Frozen** (~8.5B parameters):
+- Whisper encoder: ~155M parameters
+- LLM decoder: ~7B-8B parameters
+
+**Efficiency**: Only 0.02% of total parameters are trainable!
 
 ## 🔗 Related Documentation
 

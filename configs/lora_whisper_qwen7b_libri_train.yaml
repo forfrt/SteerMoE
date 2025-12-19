@@ -1,0 +1,84 @@
+# LoRA Model Configuration for Training
+# Ablation study baseline for comparison with SteerMoE
+
+# Whisper Encoder Configuration
+whisper_encoder:
+  model_path: "/mnt/models/whisper-large-v3/"
+  feature_dim: 1280
+  num_layers: 32
+
+# LLM Decoder Configuration
+llm_decoder:
+  model_name: "/mnt/models/Qwen2.5-7B-Instruct/"
+  max_length: 512
+  use_cache: false  # Disable cache during training
+
+# LoRA Configuration
+lora:
+  rank: 8  # LoRA rank (low-rank dimension)
+  alpha: 1.0  # LoRA scaling factor (alpha/rank)
+  dropout: 0.0  # LoRA dropout rate
+  target_modules:  # Modules to apply LoRA to (None = default: q_proj, k_proj, v_proj, out_proj, fc1, fc2)
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "out_proj"
+    - "fc1"
+    - "fc2"
+
+# Training Configuration
+training:
+  output_dir: "/mnt/results/lora_qwen7b_whisper_libri"
+  logging_dir: "/mnt/logs/lora_qwen7b_whisper_libri"
+  batch_size: 4
+  epochs: 10
+  learning_rate: 1e-4
+  lora_learning_rate: 1e-3  # Higher LR for LoRA adapters
+  weight_decay: 0.01
+  warmup_steps: 1000
+  gradient_clipping: 1.0
+  fp16: true
+  use_deepspeed: true  # Enable DeepSpeed for multi-GPU efficiency
+  per_device_eval_batch_size: 1
+
+# Dataset Configuration
+parquet_dirs:
+  - "/mnt/processed_datasets/librispeech_asr/train.clean.100/"
+  - "/mnt/processed_datasets/librispeech_asr/train.clean.360/"
+
+audio_column: "audio"
+text_column: "text"
+sample_rate: 16000
+max_audio_length: 30.0  # seconds
+max_text_length: 448
+filter_dataset: true
+
+# Textual Prompt Configuration
+textual_prompt: "please transcribe the audio content into text: "
+
+# Model Configuration
+max_prompt_tokens: 2048
+use_adapter: true
+save_total_limit: 2
+logging_steps: 100
+eval_steps: 1000
+save_steps: 1000
+
+# Callbacks Configuration
+log_lora_analysis: true
+lora_log_interval: 100
+clip_lora_gradients: true
+lora_gradient_clip: 1.0
+
+# DeepSpeed Configuration (if using)
+deepspeed_config: "configs/stage2.json"
+
+# Logging Configuration
+report_to: ["none"]  # Disable wandb/tensorboard
+logging_strategy: "steps"
+save_strategy: "steps"
+
+# Pooling Configuration (optional downsampling)
+pooling_kernel_size: 4
+pooling_position: 32
+pooling_type: "avg"
