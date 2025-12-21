@@ -32,7 +32,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from steer_moe.lora_model import LoRAModel, LoRAWhisperEncoder
-from steer_moe.utils import load_parquet_datasets, prepare_dataset, DataCollatorSpeechSeqSeqWithPaddingPrompt
+from steer_moe.utils import DataCollatorSpeechSeqSeqWithPaddingPrompt
 
 
 def load_config(path: str) -> Dict:

@@ -3,7 +3,7 @@
 # Whisper Encoder Configuration
 whisper_encoder:
   # model_path: "/root/autodl-tmp/ruitao/whisper_test/model/whisper_large_v2_WORD_CORRECT_14/model_end"  # Update with actual path
-  model_path: "/mnt/models/whisper-large-v3/"  # Update with actual path
+  model_path: "/home/fengruitao/models/openai/whisper-large-v3/"
   feature_dim: 1280
   num_layers: 32
 
@@ -11,13 +11,13 @@ whisper_encoder:
 llm_decoder:
   # model_name: "/root/autodl-tmp/model/Qwen2.5-7B-Ins-1M/"
   # model_name: "/root/autodl-tmp/model/Qwen2.5-3B-Instruct/"
-  model_name: "/mnt/models/Qwen2.5-7B-Instruct/"
+  model_name: "/home/fengruitao/models/Qwen2.5-7B-Instruct/"
   max_length: 512
   use_cache: false  # Disable cache during training
 
 # Steering Configuration
 steering:
-  num_experts: 8
+  num_experts: 16
   steering_scale: 0.1
   use_layer_scales: true
   use_gradient_clipping: true
@@ -25,8 +25,8 @@ steering:
 
 # Training Configuration
 training:
-  output_dir: "/mnt/results/layer_wise_steermoe_qwen7b_whisper_libri"
-  logging_dir: "/mnt/logs/layer_wise_steermoe_qwen7b_whisper_libri"
+  output_dir: "/home/fengruitao/SteerMoE/results/layer_wise_steermoe_qwen7b_whisper_libri"
+  logging_dir: "/home/fengruitao/SteerMoE/logs/layer_wise_steermoe_qwen7b_whisper_libri"
   batch_size: 4
   epochs: 320
   learning_rate: 1e-4
@@ -40,7 +40,7 @@ training:
 
 # Dataset Configuration
 parquet_dirs:
-  - "/mnt/processed_datasets/librispeech_asr/test.clean/"
+  - "/home/fengruitao/rt_nas/data/librispeech_asr/all/test.clean/"
 
 audio_column: "audio"
 text_column: "text"

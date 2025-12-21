@@ -12,10 +12,10 @@ import logging
 from .tokenizer.whisper_Lv3.whisper import WhisperEncoder
 
 # Import SteerMoEAligner
-from .aligner import SteerMoEAligner
+# from .aligner import SteerMoEAligner
 
 # Import layer-wise steering
-from .layer_wise_whisper import LayerWiseSteeringWhisperEncoder
+# from .layer_wise_whisper import LayerWiseSteeringWhisperEncoder
 from .efficient_layer_wise_whisper import EfficientLayerWiseSteeringWhisperEncoder
 # from .efficient_layer_wise_conformer import EfficientLayerWiseSteeringConformerEncoder
 

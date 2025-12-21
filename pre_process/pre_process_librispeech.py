@@ -39,7 +39,7 @@ def create_librispeech_hf_dataset(whisper_feature_extractor, llm_tokenizer, parq
         logging.info(f"processing batch: {batch}")
 
         try:
-            tmp_dataset = load_dataset("parquet", data_files=batch, split='train', cache_dir='/mnt/.cache/')
+            tmp_dataset = load_dataset("parquet", data_files=batch, split='train', cache_dir='/home/fengruitao/.cache/')
         except:
             logging.error(f"batch: {batch}, i: {i}")
             logging.error(traceback.format_exc())
@@ -78,21 +78,21 @@ def create_librispeech_hf_dataset(whisper_feature_extractor, llm_tokenizer, parq
 if __name__ == '__main__':
     # PLEASE UPDATE THESE PATHS ACCORDING TO YOUR SETUP
 
-    whisper_feature_extractor = WhisperFeatureExtractor.from_pretrained("/mnt/models/whisper-large-v3")
-    llm_tokenizer=AutoTokenizer.from_pretrained("/mnt/models/Qwen2.5-7B-Instruct/")
+    whisper_feature_extractor = WhisperFeatureExtractor.from_pretrained("/home/fengruitao/models/openai/whisper-large-v3")
+    llm_tokenizer=AutoTokenizer.from_pretrained("/home/fengruitao/models/Qwen2.5-7B-Instruct/")
 
-    # parquets_path='/mnt/datasets/librispeech_asr/all/train.clean.100'
-    # output_dataset_path = '/mnt/processed_datasets/librispeech_asr/train.clean.100'
+    parquets_path='/home/fengruitao/rt_nas/data/librispeech_asr/all/train.clean.100'
+    output_dataset_path = '/home/fengruitao/SteerMoE/processed_datasets/librispeech_asr/train.clean.100'
 
-    # create_librispeech_hf_dataset(whisper_feature_extractor, llm_tokenizer, parquets_path, output_dataset_path)
+    create_librispeech_hf_dataset(whisper_feature_extractor, llm_tokenizer, parquets_path, output_dataset_path)
 
-    # parquets_path='/mnt/datasets/librispeech_asr/all/train.clean.360'
-    # output_dataset_path = '/mnt/processed_datasets/librispeech_asr/train.clean.360'
+    parquets_path='/home/fengruitao/rt_nas/data/librispeech_asr/all/train.clean.360'
+    output_dataset_path = '/home/fengruitao/SteerMoE/processed_datasets/librispeech_asr/train.clean.360'
 
-    # create_librispeech_hf_dataset(whisper_feature_extractor, llm_tokenizer, parquets_path, output_dataset_path)
+    create_librispeech_hf_dataset(whisper_feature_extractor, llm_tokenizer, parquets_path, output_dataset_path)
     
-    parquets_path='/mnt/datasets/librispeech_asr/all/test.clean'
-    output_dataset_path = '/mnt/processed_datasets/librispeech_asr/test.clean'
+    parquets_path='/home/fengruitao/rt_nas/data/librispeech_asr/all/test.clean'
+    output_dataset_path = '/home/fengruitao/SteerMoE/processed_datasets/librispeech_asr/test.clean'
 
     create_librispeech_hf_dataset(whisper_feature_extractor, llm_tokenizer, parquets_path, output_dataset_path)
 

@@ -3,13 +3,13 @@
 
 # Whisper Encoder Configuration
 whisper_encoder:
-  model_path: "/mnt/models/whisper-large-v3/"
+  model_path: "/home/fengruitao/models/openai/whisper-large-v3/"
   feature_dim: 1280
   num_layers: 32
 
 # LLM Decoder Configuration
 llm_decoder:
-  model_name: "/mnt/models/Qwen2.5-7B-Instruct/"
+  model_name: "/home/fengruitao/models/Qwen2.5-7B-Instruct/"
   max_length: 512
   use_cache: false  # Disable cache during evaluation
 
@@ -28,8 +28,8 @@ lora:
 
 # Training Configuration (for evaluation settings)
 training:
-  output_dir: "/mnt/results/lora_qwen7b_whisper_libri"
-  logging_dir: "/mnt/logs/lora_qwen7b_whisper_libri"
+  output_dir: "/home/fengruitao/SteerMoE/results/lora_qwen7b_whisper_libri"
+  logging_dir: "/home/fengruitao/SteerMoE/logs/lora_qwen7b_whisper_libri"
   batch_size: 4
   epochs: 320  # Not used in evaluation, but kept for compatibility
   learning_rate: 1e-4
@@ -43,7 +43,7 @@ training:
 
 # Dataset Configuration
 parquet_dirs:
-  - "/mnt/processed_datasets/librispeech_asr/test.clean/"
+  - "/home/fengruitao/rt_nas/data/librispeech_asr/all/test.clean/"
 
 audio_column: "audio"
 text_column: "text"
