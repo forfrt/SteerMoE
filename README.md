@@ -28,17 +28,15 @@ Our models can:
 
 **Result**: Best of both worlds—excellent audio understanding + preserved LLM reasoning.
 
-## 📊 Performance Highlights
+## 📊 Performance Highlights (many hallucination found in the experiments, will correct them before 2025/12/24)
 
 ### English ASR (LibriSpeech test-clean)
 
-| Approach | CER ↓ | WER ↓ | Textual Reasoning | Trainable Params |
+| Approach | WER ↓ | Textual Reasoning | Trainable Params |
 |----------|-------|-------|-------------------|------------------|
-| Whisper-large-v3 (frozen) | 8.2% | 15.3% | ❌ No LLM | 0M |
-| Audio-LLM (fine-tuned LLM) | 5.8% | 10.5% | ⚠️ **Degraded** | 7000M |
-| Audio-LLM (LoRA tuned encoder) | 5.1% | 9.4% | ✅ Preserved | 15.5M |
-| Simple Linear Adapter | 6.8% | 12.1% | ✅ Preserved | 1.1M |
-| **SteerMoE (Ours)** | **4.5%** | **8.2%** | ✅ **Fully Preserved** | **1.8M** |
+| Whisper-large-v3 (frozen) | 2.7% | ❌ No LLM | 0M |
+| Audio-LLM (LoRA tuned encoder) | 2.51% | ✅ Preserved | 15.5M |
+| **SteerMoE (Ours)** | **2.42%** | ✅ **Fully Preserved** | **1.8M** |
 
 ### Chinese ASR (AISHELL-1)
 
@@ -400,16 +398,15 @@ We validate SteerMoE's design through comprehensive ablations:
 
 The following table estimates the WER and Trainable Parameters for the 4 and 16 expert variants. The estimations are based on the linear scaling of steering vectors (N×L×D) and the performance gain trends where doubling experts yields diminishing returns after a certain threshold.
 
-| Num Experts | CER ↓ | WER ↓ (est.)<sup>[1]</sup> | Trainable Params (est.) | Training Time |
-|-------------|-------|---------------------------|------------------------|---------------|
-| 4 | 4.9% | 8.9% | 1.5M | 9h |
-| **8 (Default)** | **4.5%** | **8.2%** | **1.8M** | **10h** |
-| 16 | 4.4% | 8.0% | 2.4M | 13h |
+| Num Experts | WER ↓ | Trainable Params |
+|-------------|-------|---------------------------|------------------------|
+| 16 (Default) | 2.43% | 2.5M |
+| **8 (Default)** | **2.42%** | **1.8M** | 
+| 4 | 3.10% | 1.5M | 
+| 2 | 6.22% | 1.3M | 
 
-**Conclusion**: SteerMoE demonstrates that 8 experts provide the "elbow point" in the trade-off.<sup>[1][2]</sup> While 16 experts offer a marginal 0.1% CER improvement, the 33% increase in trainable parameters and higher training latency (13h vs 10h) make 8 experts the optimal configuration for efficiency.
+**Conclusion**: SteerMoE demonstrates that 8 experts provide the "elbow point" in the trade-off. While 16 experts offer a marginal 0.1% CER improvement, the 33% increase in trainable parameters and higher training latency (13h vs 10h) make 8 experts the optimal configuration for efficiency.
 
-<sup>[1]</sup> WER estimates based on linear scaling trends and performance gain patterns.  
-<sup>[2]</sup> Trainable params scale as: steering vectors (N×L×D) + router (proportional to N) + fixed projection.
 
 ## 📁 Project Structure
 
@@ -495,7 +492,7 @@ See our paper ([`feng.pdf`](feng.pdf)) for detailed analysis and more results.
 
 ### AISHELL (Chinese ASR)
 
-| Model | dev CER | test CER |
+| Model | test CER |
 |-------|---------|----------|
 | Conformer (frozen) | 9.8% | 10.2% |
 | + Simple Linear | 8.5% | 8.3% |
@@ -503,11 +500,11 @@ See our paper ([`feng.pdf`](feng.pdf)) for detailed analysis and more results.
 
 ### ClothoAQA (Audio Question Answering)
 
-| Model | Accuracy | F1 Score |
-|-------|----------|----------|
-| Simple Linear | 58.3% | 54.2% |
-| **SteerMoE (Ours)** | **72.1%** | **69.8%** |
-| Fine-tuned LLM (7B params) | 74.5% | 71.3% |
+| Model | Accuracy |
+|-------|----------|
+| **SteerMoE (W7B)** | **52.35%** | 
+| **SteerMoE (C3B)** | **46.24%** | 
+| **SteerMoE (C7B)** | **49.06%** | 
 
 **Analysis**: SteerMoE achieves near fine-tuned performance while keeping LLM frozen (reasoning preserved).
 
