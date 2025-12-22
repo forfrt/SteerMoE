@@ -553,18 +553,6 @@ Trained on English, tested on unseen languages:
 
 **Paper**: See [`feng.pdf`](feng.pdf) for the full ICASSP 2025 submission with detailed methodology and additional experiments.
 
-## 📝 Citation
-
-If you use SteerMoE in your research, please cite:
-
-```bibtex
-@inproceedings{feng2025steermoe,
-  title={SteerMoE: Efficient Audio-Language Models with Preserved Reasoning via Layer-Wise Steering and Mixture-of-Experts},
-  author={Feng, Ruitao and Zhang, B.X.},
-  booktitle={IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
-  year={2025}
-}
-```
 
 ## 🚀 Future Roadmap
 
