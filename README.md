@@ -1,21 +1,21 @@
-# SteerMoE: Efficient Audio-Language Models with Preserved Reasoning Capabilities
+# SteerMoE: Efficient Audio-Language Alignment with a Mixture-of-Experts Steering Module
 
-[![Paper](https://img.shields.io/badge/ICASSP-2025-blue)](feng.pdf)
+[![Paper](https://img.shields.io/badge/Interspeech-2026-blue)](papers/Interspeech_26_SteerMOE/camera_ready.pdf)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**SteerMoE enables powerful audio-language models that understand both speech and text while preserving the full reasoning capabilities of large language models.** 
+**SteerMoE enables powerful audio-language models that understand both speech and text while preserving the full reasoning capabilities of large language models.**
 
-Unlike traditional approaches that compromise language understanding for audio processing, our method keeps the LLM completely frozen, ensuring your audio-language model maintains sophisticated textual inference, reasoning, and generation abilities—while achieving state-of-the-art performance on audio understanding tasks.
+Unlike traditional approaches that compromise language understanding for audio processing, our method keeps the LLM completely frozen, ensuring your audio-language model maintains sophisticated textual inference, reasoning, and generation abilities—while achieving strong performance on audio understanding tasks.
 
 ## 🎯 What We Achieve
 
 ### Audio + Language Understanding with Full LLM Reasoning
 
 Our models can:
-- ✅ **Transcribe speech** with high accuracy (4.5% CER on LibriSpeech)
-- ✅ **Answer questions about audio** (72.1% accuracy on ClothoAQA)  
+- ✅ **Transcribe speech** with competitive accuracy (2.42% WER on LibriSpeech with Conformer)
+- ✅ **Answer questions about audio** (52.35% accuracy on Clotho-AQA)
 - ✅ **Reason about audio content** using the LLM's powerful inference
 - ✅ **Maintain full textual capabilities** (frozen LLM preserves all language understanding)
 - ✅ **Work across multiple languages** (English, Chinese, etc.)
@@ -24,35 +24,42 @@ Our models can:
 
 **Problem**: Traditional audio-language models fine-tune the LLM, which degrades its sophisticated language reasoning abilities.
 
-**Our Solution**: Keep both the audio encoder AND the language decoder completely frozen. Train only a lightweight alignment module (~2M parameters) that bridges the two modalities.
+**Our Solution**: Keep both the audio encoder AND the language decoder completely frozen. Train only a lightweight alignment module (~1.8M parameters) that bridges the two modalities.
 
-**Result**: Best of both worlds—excellent audio understanding + preserved LLM reasoning.
+**Result**: Best of both worlds—strong audio understanding + preserved LLM reasoning.
 
-## 📊 Performance Highlights (many hallucination found in the experiments, will correct them before 2025/12/24)
+## 📊 Performance Highlights
 
 ### English ASR (LibriSpeech test-clean)
 
-| Approach | WER ↓ | Textual Reasoning | Trainable Params |
-|----------|-------|-------|-------------------|------------------|
-| Whisper-large-v3 (frozen) | 2.7% | ❌ No LLM | 0M |
-| Audio-LLM (LoRA tuned encoder) | 2.51% | ✅ Preserved | 15.5M |
-| **SteerMoE (Ours)** | **2.42%** | ✅ **Fully Preserved** | **1.8M** |
+| Model | WER ↓ | Textual Reasoning | Trainable Params |
+|-------|-------|-------------------|------------------|
+| Whisper-large-v3 (frozen) | 2.7% | ❌ No LLM | 1550M |
+| Encoder-LoRA (tuned encoder) | 2.51% | ✅ Preserved | 15.5M |
+| SteerMoE (W7B) | 5.69% | ✅ **Fully Preserved** | **1.8M** |
+| SteerMoE (C3B) | 3.26% | ✅ **Fully Preserved** | **1.8M** |
+| **SteerMoE (C7B)** | **2.42%** | ✅ **Fully Preserved** | **1.8M** |
 
-### Chinese ASR (AISHELL-1)
+### Chinese ASR (AISHELL-2)
 
 | Model | Test CER ↓ | Trainable Params |
-|-------|----------|------------------|
-| Conformer + Simple Adapter | 8.3% | 1.1M |
-| **SteerMoE + Conformer (Ours)** | **6.2%** | **1.8M** |
+|-------|-----------|------------------|
+| Whisper-large-v3 (frozen) | 4.96% | 1550M |
+| SteerMoE (W7B) | 5.96% | **1.8M** |
+| SteerMoE (C3B) | 3.44% | **1.8M** |
+| **SteerMoE (C7B)** | **2.50%** | **1.8M** |
 
-### Audio Question Answering (ClothoAQA)
+### Audio Question Answering (Clotho-AQA)
 
-| Model | Accuracy ↑ | Trainable Params |
-|-------|----------|------------------|
-| Simple Adapter | 58.3% | 1.1M |
-| **SteerMoE (Ours)** | **72.1%** | **1.8M** |
+| Model | Accuracy ↑ | Total Params | Trainable Params |
+|-------|-----------|--------------|------------------|
+| Kimi-Audio | 71.24% | 9.77B | Undisclosed (LLM fine-tuned) |
+| Step-Audio-Chat | 45.84% | 130B | Undisclosed (LLM fine-tuned) |
+| **SteerMoE (W7B)** | **52.35%** | 7B+1.5B | **1.8M** |
+| SteerMoE (C3B) | 46.24% | 3B+1.5B | **1.8M** |
+| SteerMoE (C7B) | 49.06% | 7B+1.5B | **1.8M** |
 
-**Key Insight**: We achieve **near state-of-the-art audio performance** with **fully preserved LLM reasoning** and only **1.8M trainable parameters** (~0.025% of the full model size).
+**Key Insight**: We achieve **competitive audio performance** with **fully preserved LLM reasoning** and only **1.8M trainable parameters** (~0.02% of the full model size). SteerMoE outperforms the 130B Step-Audio-Chat model by over 6 points while training only 1.8M parameters with a frozen decoder.
 
 ## 💡 Why This Matters
 
@@ -64,7 +71,7 @@ Your audio-language model maintains ALL the LLM's abilities:
 # After training on audio tasks, the LLM still excels at pure text:
 
 # Complex reasoning (preserved)
-prompt = "If Alice has twice as many apples as Bob, and Bob has 3 apples, 
+prompt = "If Alice has twice as many apples as Bob, and Bob has 3 apples,
           considering a 15% tax, how much would Alice pay for her apples at $2 each?"
 model.generate(prompt)  # ✅ Works perfectly - LLM reasoning intact
 
@@ -78,7 +85,7 @@ prompt = "Transcribe and summarize the main points: "
 model.generate(audio, prompt)  # ✅ Understands audio + reasons about content
 ```
 
-**Why this is important**: 
+**Why this is important**:
 - Deploy ONE model for both audio and text tasks
 - No compromise on language understanding quality
 - LLM's common-sense reasoning helps with audio understanding
@@ -106,7 +113,7 @@ To bridge frozen audio encoders and frozen LLMs without fine-tuning either, we i
                          ▼
          ┌───────────────────────────────┐
          │      SteerMoE Aligner         │  ← Our innovation
-         │   Layer-wise Steering + MoE   │     ~2M params
+         │   Layer-wise Steering + MoE   │     ~1.8M params
          │   (ONLY trainable part)       │     Dynamic adaptation
          └───────────────┬───────────────┘
                          │ Aligned features
@@ -136,13 +143,13 @@ Instead of learning a single static transformation, SteerMoE applies **adaptive 
 for layer_idx in range(num_layers):
     # 1. Process through frozen encoder layer
     h_l = frozen_encoder_layer[layer_idx](h_l_minus_1)
-    
+
     # 2. MoE router decides which experts to use (depends on audio content)
     expert_weights = Router(h_l)  # Different for speech/music/noise/etc.
-    
+
     # 3. Apply dynamic steering adjustment
     steering = Σ expert_weights[k] * steering_vectors[layer_idx, k]
-    
+
     # 4. Adjust the features
     h_l = h_l + layer_scale[layer_idx] * steering
 ```
@@ -166,7 +173,7 @@ Layer 31: [Expert_0: semantic concepts] [Expert_1: context alignment] ...
 
 The **router network** learns to:
 - Select **Expert_0** for clean speech
-- Select **Expert_1** for noisy audio  
+- Select **Expert_1** for noisy audio
 - Select **Expert_2** for background music
 - Mix experts for complex audio scenes
 
@@ -186,7 +193,7 @@ GPU memory: 8× A100 80GB
 SteerMoE:
 ```
 Trainable: 1.8M parameters (steering + projection only)
-Training time: ~10 GPU hours  
+Training time: ~10 GPU hours
 GPU memory: 1× A100 40GB
 Risk: Minimal (LLM behavior unchanged)
 ```
@@ -196,7 +203,7 @@ Risk: Minimal (LLM behavior unchanged)
 - Router network: `1280 dim → (8×32)` = 327K params
 - Layer scales: `32` = 32 params
 - Linear projection: `1280 → 896` = 1.1M params
-- **Total: ~1.8M params (0.025% of full model)**
+- **Total: ~1.8M params (0.02% of full model)**
 
 #### 2. Preserved Generalization
 
@@ -225,12 +232,11 @@ We provide multiple model configurations:
 |---------|----------|-----------|---------------|------------------|
 | **Whisper-large-v3** | General ASR, English | 90+ languages | ~10 hours | 1.8M |
 | **Conformer** | Chinese/Asian, Streaming | Chinese, Japanese, Korean | ~12 hours | 1.8M |
-| **Whisper + LoRA** (baseline) | Ablation study baseline | 90+ languages | ~12 hours | 15.5M |
 
 ### Model Architecture Details
 
 - **SteerMoE (Whisper/Conformer)**: Uses layer-wise steering with MoE routing. Trainable params: **1.8M** (steering vectors + router + projection).
-- **Audio-LLM (LoRA tuned encoder)**: Baseline approach using LoRA adapters on the Whisper encoder layers. Trainable params: **15.5M** (LoRA adapters on attention and FFN modules). Preserves LLM reasoning but uses ~8.6× more parameters than SteerMoE.
+- **Encoder-LoRA (baseline)**: Baseline approach using LoRA adapters on the Whisper encoder layers. Trainable params: **15.5M** (LoRA adapters on attention and FFN modules). Preserves LLM reasoning but uses ~8.6× more parameters than SteerMoE.
 
 Both SteerMoE variants use the **same technology**, just with different audio encoders.
 
@@ -263,11 +269,11 @@ python pre_process/pre_process_librispeech.py \
   --whisper_model /path/to/whisper-large-v3 \
   --llm_tokenizer /path/to/Qwen2.5-7B-Instruct
 
-# For Chinese (AISHELL)
+# For Chinese (AISHELL-2)
 python pre_process/pre_process_aishell.py \
-  --audio_dir /path/to/aishell/wav \
-  --trans_file /path/to/aishell/trans.txt \
-  --output_dir /path/to/processed_aishell
+  --audio_dir /path/to/aishell2/wav \
+  --trans_file /path/to/aishell2/trans.txt \
+  --output_dir /path/to/processed_aishell2
 ```
 
 See [`pre_process/README.md`](pre_process/README.md) for other datasets.
@@ -281,7 +287,7 @@ Edit `configs/layer_wise_whisper_qwen7b_libri_train.yaml`:
 whisper_encoder:
   model_path: "/path/to/whisper-large-v3"
 
-# Language decoder (frozen)  
+# Language decoder (frozen)
 llm_decoder:
   model_name: "/path/to/Qwen2.5-7B-Instruct"
 
@@ -362,51 +368,26 @@ print(answer)  # ✅ Uses LLM reasoning to analyze emotion
 
 Comprehensive guides for each component:
 
-- **[`configs/README.md`](configs/README.md)** - Configuration files and hyperparameters
-- **[`pre_process/README.md`](pre_process/README.md)** - Dataset preprocessing for ASR, QA, etc.
-- **[`scripts/README.md`](scripts/README.md)** - Training, evaluation, and analysis scripts
-- **[`steer_moe/README.md`](steer_moe/README.md)** - Core model implementation details
+- **[`configs/README.md`](configs/README.md)** | **[`configs/README_CN.md`](configs/README_CN.md)** - Configuration files and hyperparameters
+- **[`pre_process/README.md`](pre_process/README.md)** | **[`pre_process/README_CN.md`](pre_process/README_CN.md)** - Dataset preprocessing for ASR, QA, etc.
+- **[`scripts/README.md`](scripts/README.md)** | **[`scripts/README_CN.md`](scripts/README_CN.md)** - Training, evaluation, and analysis scripts
+- **[`steer_moe/README.md`](steer_moe/README.md)** | **[`steer_moe/README_CN.md`](steer_moe/README_CN.md)** - Core model implementation details
 
 ## 🔬 Ablation Studies
 
 We validate SteerMoE's design through comprehensive ablations:
 
-### 1. SteerMoE vs. Baselines
-
-| Component | LoRA Encoder | Linear Only | SteerMoE | Improvement vs LoRA |
-|-----------|--------------|-------------|----------|---------------------|
-| Trainable params | 15.5M | 1.1M | 1.8M | 8.6× fewer |
-| LibriSpeech CER | 5.1% | 6.8% | **4.5%** | **-12% relative** |
-| LibriSpeech WER | 9.4% | 12.1% | **8.2%** | **-13% relative** |
-| AISHELL CER | - | 8.3% | **6.2%** | **-25% relative** |
-| ClothoAQA Acc | - | 58.3% | **72.1%** | **+24% absolute** |
-| Textual Reasoning | ✅ Preserved | ✅ Preserved | ✅ **Fully Preserved** | - |
-
-**Conclusion**: SteerMoE outperforms LoRA-tuned encoder (5.1% → 4.5% CER) with 8.6× fewer parameters (15.5M → 1.8M), demonstrating superior parameter efficiency while maintaining full LLM reasoning capabilities.
-
-### 2. Architectural Variants
-
-| Variant | Description | CER | Params |
-|---------|-------------|-----|--------|
-| Post-encoder steering | Single steering after encoder | 5.2% | 1.6M |
-| Multiple routers | One router per layer | 4.6% | 10.3M |
-| **Single efficient router** | **Our design** | **4.5%** | **1.8M** |
-
-**Conclusion**: Our single-router design achieves best performance-efficiency trade-off.
-
-### 3. SteerMoE Ablation: Number of Experts
-
-The following table estimates the WER and Trainable Parameters for the 4 and 16 expert variants. The estimations are based on the linear scaling of steering vectors (N×L×D) and the performance gain trends where doubling experts yields diminishing returns after a certain threshold.
+### SteerMoE Ablation: Number of Experts
 
 | Num Experts | WER ↓ | Trainable Params |
-|-------------|-------|---------------------------|------------------------|
-| 16 (Default) | 2.43% | 2.5M |
-| **8 (Default)** | **2.42%** | **1.8M** | 
-| 4 | 3.10% | 1.5M | 
-| 2 | 6.22% | 1.3M | 
+|-------------|-------|------------------|
+| 16 | 2.43% | 2.5M |
+| **8 (Default)** | **2.42%** | **1.8M** |
+| 4 | 3.10% | 1.5M |
+| 2 | 6.22% | 1.3M |
+| Static Adapter (No MoE) | >100% | 1.1M |
 
-**Conclusion**: SteerMoE demonstrates that 8 experts provide the "elbow point" in the trade-off. While 16 experts offer a marginal 0.1% CER improvement, the 33% increase in trainable parameters and higher training latency (13h vs 10h) make 8 experts the optimal configuration for efficiency.
-
+**Conclusion**: The dramatic performance collapse from SteerMoE (2 Experts) to Static Adapter (No MoE) confirms that dynamic steering is essential—without content-adaptive routing, the static projection fails to bridge the audio-text representational gap, producing largely unintelligible outputs. SteerMoE demonstrates that 8 experts provide the optimal trade-off: while 16 experts offer only a marginal 0.01% WER improvement, the 39% increase in trainable parameters makes 8 experts the most efficient configuration.
 
 ## 📁 Project Structure
 
@@ -415,26 +396,29 @@ SteerMoE/
 ├── configs/              # Training configurations
 │   ├── layer_wise_whisper_qwen7b_libri_train.yaml
 │   ├── layer_wise_conformer_qwen7b_aishell_train.yaml
-│   └── README.md
+│   └── README.md / README_CN.md
 ├── pre_process/          # Dataset preprocessing
 │   ├── pre_process_librispeech.py
 │   ├── pre_process_aishell.py
 │   ├── pre_process_clothoaqa.py
-│   └── README.md
+│   └── README.md / README_CN.md
 ├── scripts/              # Training and evaluation
 │   ├── train_layer_wise.py              # Main training (Whisper)
 │   ├── train_layer_wise_conformer.py    # Main training (Conformer)
 │   ├── train_layer_wise_linear_whisper.py  # Ablation baseline
 │   ├── cer.py, wer.py                    # Evaluation metrics
-│   └── README.md
+│   └── README.md / README_CN.md
 ├── steer_moe/            # Core implementation
 │   ├── models.py                         # SteerMoE model classes
 │   ├── efficient_layer_wise_whisper.py  # Whisper + steering
 │   ├── efficient_layer_wise_conformer.py # Conformer + steering
 │   ├── utils.py                          # Data collators
-│   └── README.md
+│   └── README.md / README_CN.md
+├── papers/               # Research papers
+│   ├── Interspeech_26_SteerMOE/         # Interspeech 2026 submission
+│   └── ICASSP_SteerMoE/                 # ICASSP 2025 submission
 ├── results/              # Training outputs
-└── README.md             # This file
+└── README.md / README_CN.md  # This file
 ```
 
 ## 🎓 Research Background
@@ -463,7 +447,7 @@ Audio → Encoder → [Linear] → [Frozen LLM] → Output
 ```
 Audio → Encoder → [SteerMoE: Dynamic Steering] → [Frozen LLM] → Output
                    ✅ LLM fully preserved
-                   ✅ Excellent audio understanding  
+                   ✅ Strong audio understanding
                    ✅ Content-adaptive transformation
                    ✅ Only 1.8M params trained
 ```
@@ -475,50 +459,7 @@ Audio → Encoder → [SteerMoE: Dynamic Steering] → [Frozen LLM] → Output
 3. **Layer-wise is crucial**: Different encoder layers need different alignment strategies
 4. **Efficiency is achievable**: Single router reduces parameters by 32× vs. naive multi-router MoE
 
-See our paper ([`feng.pdf`](feng.pdf)) for detailed analysis and more results.
-
-## 📊 Detailed Results
-
-### LibriSpeech (English ASR)
-
-| Model | test-clean CER | test-clean WER | test-other CER | test-other WER |
-|-------|----------------|----------------|----------------|----------------|
-| Whisper-large-v3 (frozen) | 8.2% | 15.3% | 15.1% | 28.2% |
-| + Simple Linear | 6.8% | 12.1% | 12.8% | 24.5% |
-| **+ SteerMoE (Ours)** | **4.5%** | **8.2%** | **9.1%** | **18.7%** |
-| Fine-tuned Whisper (1.5B params) | 3.8% | 6.9% | 8.2% | 16.8% |
-
-**Analysis**: SteerMoE approaches fine-tuned performance with 1000× fewer trainable parameters while preserving LLM capabilities.
-
-### AISHELL (Chinese ASR)
-
-| Model | test CER |
-|-------|---------|----------|
-| Conformer (frozen) | 9.8% | 10.2% |
-| + Simple Linear | 8.5% | 8.3% |
-| **+ SteerMoE (Ours)** | **6.0%** | **6.2%** |
-
-### ClothoAQA (Audio Question Answering)
-
-| Model | Accuracy |
-|-------|----------|
-| **SteerMoE (W7B)** | **52.35%** | 
-| **SteerMoE (C3B)** | **46.24%** | 
-| **SteerMoE (C7B)** | **49.06%** | 
-
-**Analysis**: SteerMoE achieves near fine-tuned performance while keeping LLM frozen (reasoning preserved).
-
-### Cross-lingual Generalization
-
-Trained on English, tested on unseen languages:
-
-| Language | Whisper (frozen) | + SteerMoE | Improvement |
-|----------|------------------|------------|-------------|
-| German | 12.3% WER | 9.8% WER | -20% |
-| French | 11.8% WER | 9.2% WER | -22% |
-| Spanish | 10.5% WER | 8.1% WER | -23% |
-
-**Analysis**: Frozen Whisper's multilingual abilities are preserved and enhanced.
+See our paper ([`papers/Interspeech_26_SteerMOE/camera_ready.pdf`](papers/Interspeech_26_SteerMOE/camera_ready.pdf)) for detailed analysis and more results.
 
 ## 💻 Hardware Requirements
 
@@ -539,88 +480,17 @@ Trained on English, tested on unseen languages:
 
 ## 📧 Contact & Support
 
-**Authors**: 
-- Ruitao Feng - [GitHub: @forfrt](https://github.com/forfrt)
-- B.X. Zhang - [GitHub: @zbxforward](https://github.com/zbxforward)
+**Authors**:
+- Ruitao Feng - [GitHub: @forfrt](https://github.com/forfrt) - ruitaofeng@outlook.com
+- Bixi Zhang - [GitHub: @zbxforward](https://github.com/zbxforward) - bixizhang@hku.hk
+- Sheng Liang - shengliang@outlook.com
+- Zheng Yuan (Corresponding Author) - zheng.yuan@univ-amu.fr
 
 **Get Help**:
 - 🐛 **Bug reports**: [GitHub Issues](https://github.com/forfrt/SteerMoE/issues)
 - 💬 **Questions**: [GitHub Discussions](https://github.com/forfrt/SteerMoE/discussions)
-- 📧 **Email**: [Your email here]
 
-**Paper**: See [`feng.pdf`](feng.pdf) for the full ICASSP 2025 submission with detailed methodology and additional experiments.
-
-
-## 🚀 Future Roadmap
-
-We are actively developing the following features:
-
-### 1. LoRA Fine-tuning Option (Coming Q2 2025)
-
-**Goal**: Enable optional LoRA tuning of the LLM decoder for users who need maximum task-specific performance.
-
-```python
-# Planned API
-model = SteerMoEEfficientLayerWiseModel(
-    whisper_encoder=whisper,
-    llm_decoder=qwen,
-    use_lora=True,           # Enable LoRA for LLM
-    lora_rank=16,
-    lora_alpha=32,
-    lora_target_modules=["q_proj", "v_proj"]
-)
-```
-
-**Trade-offs**:
-- ✅ Potential 10-20% further performance improvement on specialized domains
-- ⚠️ May slightly reduce general textual reasoning (frozen LLM is our core design goal)
-- ⚠️ Increases trainable parameters to ~7-10M (still efficient!)
-
-**Use cases**: Medical ASR, legal transcription, domain-specific QA where maximum accuracy is critical.
-
-### 2. Single-Audio Inference Script (Coming Q1 2025)
-
-**Goal**: Easy-to-use command-line tool for quick transcription and audio understanding.
-
-```bash
-# Planned usage
-python scripts/inference.py \
-  --model results/steermoe_checkpoint \
-  --audio speech.wav \
-  --task transcribe
-
-# Output: "The quick brown fox jumps over the lazy dog."
-
-# With custom prompts
-python scripts/inference.py \
-  --model results/steermoe_checkpoint \
-  --audio meeting.wav \
-  --prompt "Summarize the main discussion points and action items: "
-
-# Output: "The meeting covered Q4 planning with three action items:
-#          1) Launch marketing campaign by Nov 15
-#          2) Complete beta testing by Dec 1
-#          3) Schedule follow-up meeting on Dec 10"
-```
-
-**Features**:
-- 🎵 Support WAV, MP3, FLAC, OGG formats
-- 📝 Multiple tasks: transcribe, summarize, QA, sentiment analysis
-- 🔄 Batch processing for multiple files
-- 🌐 Streaming mode for real-time applications
-
-### 3. Additional Planned Features
-
-- **Web Interface**: Gradio/Streamlit demo for interactive use
-- **ONNX Export**: Deploy with ONNX Runtime for production inference
-- **Distillation**: Smaller models (Qwen-1.5B) for edge deployment
-- **More Languages**: Pre-trained checkpoints for 20+ languages
-- **Multi-modal**: Extend to audio-visual understanding
-
-**Stay Updated**: 
-- ⭐ Star this repo to get notifications
-- 👀 Watch for release announcements
-- 📬 Subscribe to our [mailing list](mailto:your-email@example.com)
+**Paper**: See [`papers/Interspeech_26_SteerMOE/camera_ready.pdf`](papers/Interspeech_26_SteerMOE/camera_ready.pdf) for the full Interspeech 2026 submission with detailed methodology and additional experiments.
 
 ## 📄 License
 
@@ -631,12 +501,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 This work builds upon excellent open-source projects:
 
 - **[Whisper](https://github.com/openai/whisper)** (OpenAI) - Robust speech recognition
-- **[Qwen](https://github.com/QwenLM/Qwen)** (Alibaba) - Powerful multilingual LLM  
+- **[Qwen](https://github.com/QwenLM/Qwen)** (Alibaba) - Powerful multilingual LLM
 - **[DeepSpeed](https://github.com/microsoft/DeepSpeed)** (Microsoft) - Efficient distributed training
 - **[Transformers](https://github.com/huggingface/transformers)** (HuggingFace) - Model implementations and training utilities
 
 We also thank the research community for datasets:
-- LibriSpeech, AISHELL, ClothoAQA, and other benchmark datasets
+- LibriSpeech, AISHELL-2, Clotho-AQA, and other benchmark datasets
 - Open-source audio processing libraries (librosa, soundfile, torchaudio)
 
 ## 🌟 Star History
