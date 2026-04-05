@@ -1,0 +1,17 @@
+# model = "gpt-5.2-codex"
+model = "gpt-5.4"
+# model = "gemini-2.5-pro"
+approval_policy = "on-request"
+# model_provider = "hiapi"
+model_provider = "gptplus5"
+
+[model_providers.hiapi]
+name = "OpenAI using LLM proxy"
+base_url = "http://38.246.251.165:3003/v1"
+env_key = "HIAPI_KEY"
+
+[model_providers.gptplus5]
+name = "OpenAI using LLM proxy"
+base_url = "http://az.gptplus5.com/v1"
+env_key = "GPTPLUS_KEY"
+
