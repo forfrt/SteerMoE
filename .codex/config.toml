@@ -1,9 +1,8 @@
-# model = "gpt-5.2-codex"
 model = "gpt-5.4"
-# model = "gemini-2.5-pro"
 approval_policy = "on-request"
 # model_provider = "hiapi"
-model_provider = "gptplus5"
+# model_provider = "gptplus5"
+model_provider = "sub2api"
 
 [model_providers.hiapi]
 name = "OpenAI using LLM proxy"
@@ -14,4 +13,11 @@ env_key = "HIAPI_KEY"
 name = "OpenAI using LLM proxy"
 base_url = "http://az.gptplus5.com/v1"
 env_key = "GPTPLUS_KEY"
+
+[model_providers.sub2api]
+name = "sub2api"
+base_url = "http://www.lazycoder.cloud-ip.cc"
+env_key = "SUB2API"
+wire_api = "responses"
+requires_openai_auth = true
 
